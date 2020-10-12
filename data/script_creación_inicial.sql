@@ -56,40 +56,40 @@ GO
 --Creacion de Tablas
 CREATE TABLE LOS_GEDDES.Ciudades (
   ciud_id     bigint IDENTITY(1,1) NOT NULL,
-  ciud_nombre nvarchar(255)
+  ciud_nombre nvarchar(255) NOT NULL
   CONSTRAINT PK_Ciudades PRIMARY KEY(ciud_id)
 );  
 
 CREATE TABLE LOS_GEDDES.Sucursales(
   sucu_id		 bigint IDENTITY(1,1) NOT NULL,
-  sucu_direccion nvarchar(255),
-  sucu_mail		 nvarchar(255),
-  sucu_telefono  decimal(18,0),
-  sucu_ciudad    bigint
+  sucu_direccion nvarchar(255) NOT NULL,
+  sucu_mail		 nvarchar(255) NOT NULL,
+  sucu_telefono  decimal(18,0) NOT NULL,
+  sucu_ciudad    bigint NOT NULL
 
   CONSTRAINT PK_Sucursales PRIMARY KEY(sucu_id),
   CONSTRAINT FK_Sucursales_ciudad FOREIGN KEY(sucu_ciudad) REFERENCES LOS_GEDDES.Ciudades(ciud_id)
 );
 
 CREATE TABLE LOS_GEDDES.Tipos_automoviles(
-  taut_codigo	   decimal(18,0), 
-  taut_descripcion nvarchar(255)
+  taut_codigo	   decimal(18,0) NOT NULL, 
+  taut_descripcion nvarchar(255) NOT NULL
 
   CONSTRAINT PK_Tipos_automoviles PRIMARY KEY(taut_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Componentes (
-  comp_id		   bigint IDENTITY(1,1) NOT NULL,
-  comp_descripcion nvarchar(255)
+  comp_id		   bigint,
+  comp_descripcion nvarchar(255) NOT NULL
 
   CONSTRAINT PK_Componentes PRIMARY KEY(comp_id)
 );
 
 CREATE TABLE LOS_GEDDES.Tipo_componentes(
   tcom_id			 bigint IDENTITY(1,1) NOT NULL,
-  tcom_componente    bigint,
-  tcom_codigo		 decimal(18,0),
-  tcom_descripcion	 nvarchar(255)
+  tcom_componente    bigint NOT NULL,
+  tcom_codigo		 decimal(18,0) NOT NULL,
+  tcom_descripcion	 nvarchar(255) NOT NULL
 
   CONSTRAINT PK_Tipo_componentes PRIMARY KEY(tcom_id),
   CONSTRAINT FK_Tipo_componentes_componente FOREIGN KEY(tcom_componente) REFERENCES LOS_GEDDES.Componentes(comp_id)
@@ -97,20 +97,20 @@ CREATE TABLE LOS_GEDDES.Tipo_componentes(
 
 CREATE TABLE LOS_GEDDES.Fabricantes(
   fabr_id	  bigint IDENTITY(1,1) NOT NULL,
-  fabr_nombre nvarchar(255)
+  fabr_nombre nvarchar(255) NOT NULL
 
   CONSTRAINT PK_Fabricantes PRIMARY KEY(fabr_id)
 );
 
 CREATE TABLE LOS_GEDDES.Modelos_automoviles(
-  mode_codigo            decimal(18,0),
-  mode_nombre            nvarchar(255),
-  mode_potencia          decimal(18,0),
-  mode_fabricante        bigint,
-  mode_tipo_auto         decimal(18,0),
-  mode_tipo_transmision  bigint,
-  mode_tipo_motor        bigint,
-  mode_tipo_caja_cambios bigint,
+  mode_codigo            decimal(18,0) NOT NULL,
+  mode_nombre            nvarchar(255) NOT NULL,
+  mode_potencia          decimal(18,0) NOT NULL,
+  mode_fabricante        bigint NOT NULL,
+  mode_tipo_auto         decimal(18,0) NOT NULL,
+  mode_tipo_transmision  bigint NOT NULL,
+  mode_tipo_motor        bigint NOT NULL,
+  mode_tipo_caja_cambios bigint NOT NULL,
   mode_cantidad_cambios  smallint
 
   CONSTRAINT PK_Modelos_automoviles PRIMARY KEY(mode_codigo),
@@ -123,12 +123,12 @@ CREATE TABLE LOS_GEDDES.Modelos_automoviles(
 
 CREATE TABLE LOS_GEDDES.Automoviles(
   auto_id         bigint IDENTITY(1,1) NOT NULL,
-  auto_nro_chasis nvarchar(50),
-  auto_nro_motor  nvarchar(50),
-  auto_patente    nvarchar(50),
-  auto_fecha_alta datetime2(3),
-  auto_cant_kms   decimal(18,0),
-  auto_modelo     decimal(18,0)
+  auto_nro_chasis nvarchar(50) NOT NULL,
+  auto_nro_motor  nvarchar(50) NOT NULL,
+  auto_patente    nvarchar(50) NOT NULL,
+  auto_fecha_alta datetime2(3) NOT NULL,
+  auto_cant_kms   decimal(18,0) NOT NULL,
+  auto_modelo     decimal(18,0) NOT NULL
 
   CONSTRAINT PK_Automoviles PRIMARY KEY(auto_id),
   CONSTRAINT FK_Automoviles_modelo FOREIGN KEY(auto_modelo) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
@@ -136,12 +136,12 @@ CREATE TABLE LOS_GEDDES.Automoviles(
 
 CREATE TABLE LOS_GEDDES.Clientes(
   clie_id		 bigint IDENTITY(1,1) NOT NULL,
-  clie_nombre	 nvarchar(255),
-  clie_apellido  nvarchar(255),
-  clie_dni		 decimal(18,0),
-  clie_direccion nvarchar(255),
-  clie_fecha_nac datetime2(3),
-  clie_mail		 nvarchar(255),
+  clie_nombre	 nvarchar(255) NOT NULL,
+  clie_apellido  nvarchar(255) NOT NULL,
+  clie_dni		 decimal(18,0) NOT NULL,
+  clie_direccion nvarchar(255) NOT NULL,
+  clie_fecha_nac datetime2(3) NOT NULL,
+  clie_mail		 nvarchar(255) NOT NULL,
   clie_sexo		 char(1)
   
   CONSTRAINT PK_Clientes PRIMARY KEY(clie_id),
@@ -149,12 +149,12 @@ CREATE TABLE LOS_GEDDES.Clientes(
 );
 
 CREATE TABLE LOS_GEDDES.Compras(
-  cpra_numero        decimal(18,0),
-  cpra_fecha         datetime2(3),
-  cpra_precio_total  decimal(18,2),
-  cpra_sucursal      bigint,
-  cpra_automovil     bigint,
-  cpra_cliente       bigint
+  cpra_numero        decimal(18,0) NOT NULL,
+  cpra_fecha         datetime2(3) NOT NULL,
+  cpra_precio_total  decimal(18,2) NOT NULL,
+  cpra_sucursal      bigint NOT NULL,
+  cpra_automovil     bigint NOT NULL,
+  cpra_cliente       bigint NOT NULL
 
   CONSTRAINT PK_Compras PRIMARY KEY(cpra_numero)
   CONSTRAINT FK_Compras_sucursal FOREIGN KEY(cpra_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
@@ -163,17 +163,17 @@ CREATE TABLE LOS_GEDDES.Compras(
 );
 
 CREATE TABLE LOS_GEDDES.Categorias_autopartes(
-  cate_codigo	   bigint,
-  cate_descripcion nvarchar(255)
+  cate_codigo	   bigint NOT NULL,
+  cate_descripcion nvarchar(255) NOT NULL
   
   CONSTRAINT PK_Categorias_autopartes PRIMARY KEY(cate_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Autopartes(
-  apte_codigo		  decimal(18,0), 
-  apte_descripcion	  nvarchar(255),
-  apte_modelo_auto    decimal(18,0),
-  apte_fabricante     bigint,
+  apte_codigo		  decimal(18,0) NOT NULL, 
+  apte_descripcion	  nvarchar(255) NOT NULL,
+  apte_modelo_auto    decimal(18,0) NOT NULL,
+  apte_fabricante     bigint NOT NULL,
   apte_categoria      bigint
 
   CONSTRAINT PK_Autopartes PRIMARY KEY(apte_codigo),
@@ -183,10 +183,10 @@ CREATE TABLE LOS_GEDDES.Autopartes(
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_compra (
-  ipco_id_compra	decimal(18,0),
-  ipco_id_autoparte decimal(18,0),
-  ipco_cantidad	    decimal(18,0),
-  ipco_precio	    decimal(18,2)
+  ipco_id_compra	decimal(18,0) NOT NULL,
+  ipco_id_autoparte decimal(18,0) NOT NULL,
+  ipco_cantidad	    decimal(18,0) NOT NULL,
+  ipco_precio	    decimal(18,2) NOT NULL
 
   CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte),
   CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_numero),
@@ -195,13 +195,13 @@ CREATE TABLE LOS_GEDDES.Items_por_compra (
 
 CREATE TABLE LOS_GEDDES.Facturas(
   fact_id				 bigint IDENTITY(1,1) NOT NULL,
-  fact_numero			 decimal(18,0),
-  fact_fecha			 datetime2(3),
-  fact_cliente   		 bigint,
-  fact_sucursal 		 bigint,
-  fact_automovil		 bigint,
-  fact_direccion_cliente nvarchar(255),
-  fact_mail_cliente		 nvarchar(255)
+  fact_numero			 decimal(18,0) NOT NULL,
+  fact_fecha			 datetime2(3) NOT NULL,
+  fact_cliente   		 bigint NOT NULL,
+  fact_sucursal 		 bigint NOT NULL,
+  fact_automovil		 bigint NOT NULL,
+  fact_direccion_cliente nvarchar(255) NOT NULL,
+  fact_mail_cliente		 nvarchar(255) NOT NULL
 
   CONSTRAINT PK_Facturas PRIMARY KEY(fact_id),
   CONSTRAINT FK_Facturas_cliente FOREIGN KEY(fact_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id),
@@ -211,12 +211,63 @@ CREATE TABLE LOS_GEDDES.Facturas(
 
 CREATE TABLE LOS_GEDDES.Items_por_factura(
   ipfa_id_factura	   bigint IDENTITY(1,1) NOT NULL,
-  ipfa_id_autoparte	   decimal(18,0),
-  ipfa_cantidad		   decimal(18,0),
-  ipfa_precio_facturado decimal(18,2)
+  ipfa_id_autoparte	   decimal(18,0) NOT NULL,
+  ipfa_cantidad		   decimal(18,0) NOT NULL,
+  ipfa_precio_facturado decimal(18,2) NOT NULL
 
   CONSTRAINT PK_Items_por_factura PRIMARY KEY (ipfa_id_factura, ipfa_id_autoparte),
   CONSTRAINT FK_Items_por_factura_id_factura FOREIGN KEY(ipfa_id_factura  ) REFERENCES LOS_GEDDES.Facturas(fact_id),
   CONSTRAINT FK_Items_por_factura_id_autoparte FOREIGN KEY(ipfa_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
 );
 GO
+
+--Ciudades
+INSERT INTO LOS_GEDDES.Ciudades(ciud_nombre)
+SELECT DISTINCT SUCURSAL_CIUDAD 
+FROM gd_esquema.Maestra
+WHERE SUCURSAL_CIUDAD IS NOT NULL;
+
+--Sucursales
+INSERT INTO LOS_GEDDES.Sucursales(sucu_direccion,sucu_mail,sucu_telefono,sucu_ciudad)
+SELECT DISTINCT SUCURSAL_DIRECCION,SUCURSAL_MAIL,SUCURSAL_TELEFONO,c.ciud_id
+FROM gd_esquema.Maestra m
+JOIN LOS_GEDDES.Ciudades c on c.ciud_nombre = m.SUCURSAL_CIUDAD
+WHERE SUCURSAL_CIUDAD IS NOT NULL;
+
+--Tipo Automoviles
+INSERT INTO LOS_GEDDES.Tipos_automoviles(taut_codigo,taut_descripcion)
+SELECT DISTINCT TIPO_AUTO_CODIGO,TIPO_AUTO_DESC
+FROM gd_esquema.Maestra
+WHERE TIPO_AUTO_CODIGO IS NOT NULL
+
+--Componentes
+INSERT INTO LOS_GEDDES.Componentes(comp_id,comp_descripcion)
+VALUES (1,'TRANSMISION'),
+       (2,'CAJA'),
+       (3,'MOTOR');
+
+--Tipo Componentes
+INSERT INTO LOS_GEDDES.Tipo_componentes(tcom_componente,tcom_codigo,tcom_descripcion)
+(
+    SELECT DISTINCT 1,TIPO_TRANSMISION_CODIGO,TIPO_TRANSMISION_DESC
+    FROM gd_esquema.Maestra
+    WHERE TIPO_TRANSMISION_CODIGO IS NOT NULL
+
+    UNION ALL
+
+    SELECT DISTINCT 2,TIPO_CAJA_CODIGO,TIPO_CAJA_DESC
+    FROM gd_esquema.Maestra
+    WHERE TIPO_CAJA_CODIGO IS NOT NULL
+
+    UNION ALL
+
+    SELECT DISTINCT 3,TIPO_MOTOR_CODIGO,TIPO_AUTO_DESC
+    FROM gd_esquema.Maestra
+    WHERE TIPO_MOTOR_CODIGO IS NOT NULL
+)
+
+--Fabricantes
+INSERT INTO LOS_GEDDES.Fabricantes(fabr_nombre)
+SELECT DISTINCT FABRICANTE_NOMBRE
+FROM gd_esquema.Maestra
+WHERE FABRICANTE_NOMBRE IS NOT NULL;
