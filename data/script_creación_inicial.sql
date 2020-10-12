@@ -89,7 +89,7 @@ CREATE TABLE LOS_GEDDES.Tipo_componentes(
   tcom_id			 bigint IDENTITY(1,1) NOT NULL,
   tcom_componente    bigint NOT NULL,
   tcom_codigo		 decimal(18,0) NOT NULL,
-  tcom_descripcion	 nvarchar(255) NOT NULL
+  tcom_descripcion	 nvarchar(255)
 
   CONSTRAINT PK_Tipo_componentes PRIMARY KEY(tcom_id),
   CONSTRAINT FK_Tipo_componentes_componente FOREIGN KEY(tcom_componente) REFERENCES LOS_GEDDES.Componentes(comp_id)
@@ -261,7 +261,7 @@ INSERT INTO LOS_GEDDES.Tipo_componentes(tcom_componente,tcom_codigo,tcom_descrip
 
     UNION ALL
 
-    SELECT DISTINCT 3,TIPO_MOTOR_CODIGO,TIPO_AUTO_DESC
+    SELECT DISTINCT 3,TIPO_MOTOR_CODIGO,null
     FROM gd_esquema.Maestra
     WHERE TIPO_MOTOR_CODIGO IS NOT NULL
 )
@@ -271,3 +271,19 @@ INSERT INTO LOS_GEDDES.Fabricantes(fabr_nombre)
 SELECT DISTINCT FABRICANTE_NOMBRE
 FROM gd_esquema.Maestra
 WHERE FABRICANTE_NOMBRE IS NOT NULL;
+
+--Modelos Automoviles
+INSERT INTO LOS_GEDDES.Modelos_automoviles(mode_codigo,mode_nombre,mode_potencia,mode_fabricante,
+    mode_tipo_auto,mode_tipo_transmision,mode_tipo_motor,mode_tipo_caja_cambios,mode_cantidad_cambios)
+SELECT DISTINCT 
+    MODELO_CODIGO,MODELO_NOMBRE,MODELO_POTENCIA,f.fabr_id,ta.taut_codigo,tct.tcom_id trasmicion,tcm.tcom_id motor,tcc.tcom_id caja,0
+FROM gd_esquema.Maestra m
+JOIN LOS_GEDDES.Fabricantes f on f.fabr_nombre = m.FABRICANTE_NOMBRE
+JOIN LOS_GEDDES.Tipos_automoviles ta on ta.taut_codigo = m.TIPO_AUTO_CODIGO
+JOIN LOS_GEDDES.Tipo_componentes tct on tct.tcom_codigo = m.TIPO_TRANSMISION_CODIGO and tct.tcom_descripcion = m.TIPO_TRANSMISION_DESC and tct.tcom_componente = 1
+JOIN LOS_GEDDES.Tipo_componentes tcc on tcc.tcom_codigo = m.TIPO_CAJA_CODIGO and tcc.tcom_descripcion = m.TIPO_CAJA_DESC and tcc.tcom_componente = 2
+JOIN LOS_GEDDES.Tipo_componentes tcm on tcm.tcom_codigo = m.TIPO_MOTOR_CODIGO and tcm.tcom_componente = 3
+WHERE m.MODELO_CODIGO IS NOT NULL and m.TIPO_TRANSMISION_CODIGO is not null 
+    and m.TIPO_CAJA_CODIGO is not null and m.TIPO_MOTOR_CODIGO is not null;
+
+--
