@@ -136,9 +136,9 @@ CREATE TABLE LOS_GEDDES.Automoviles(
 
 CREATE TABLE LOS_GEDDES.Clientes(
   clie_id		 bigint IDENTITY(1,1) NOT NULL,
-  clie_nombre	 nvarchar(255) NOT NULL,
-  clie_apellido  nvarchar(255) NOT NULL,
   clie_dni		 decimal(18,0) NOT NULL,
+  clie_nombre	 nvarchar(255) NOT NULL,
+  clie_apellido  nvarchar(255) NOT NULL,  
   clie_direccion nvarchar(255) NOT NULL,
   clie_fecha_nac datetime2(3) NOT NULL,
   clie_mail		 nvarchar(255) NOT NULL,
@@ -222,32 +222,53 @@ CREATE TABLE LOS_GEDDES.Items_por_factura(
 );
 GO
 
---Ciudades
+-- Migracion de Datos
+print '*************************** Inicio migracion de datos ****************************'
+-- Ciudades
+print '
+>> Migracion Ciudades:'
+
 INSERT INTO LOS_GEDDES.Ciudades(ciud_nombre)
 SELECT DISTINCT SUCURSAL_CIUDAD 
 FROM gd_esquema.Maestra
 WHERE SUCURSAL_CIUDAD IS NOT NULL;
+GO
 
 --Sucursales
+print '
+>> Migracion Sucursales'
+
 INSERT INTO LOS_GEDDES.Sucursales(sucu_direccion,sucu_mail,sucu_telefono,sucu_ciudad)
 SELECT DISTINCT SUCURSAL_DIRECCION,SUCURSAL_MAIL,SUCURSAL_TELEFONO,c.ciud_id
 FROM gd_esquema.Maestra m
 JOIN LOS_GEDDES.Ciudades c on c.ciud_nombre = m.SUCURSAL_CIUDAD
 WHERE SUCURSAL_CIUDAD IS NOT NULL;
+GO
 
 --Tipo Automoviles
+print '
+>> Migracion Tipos_automoviles'
+
 INSERT INTO LOS_GEDDES.Tipos_automoviles(taut_codigo,taut_descripcion)
 SELECT DISTINCT TIPO_AUTO_CODIGO,TIPO_AUTO_DESC
 FROM gd_esquema.Maestra
 WHERE TIPO_AUTO_CODIGO IS NOT NULL
+GO
 
 --Componentes
+print '
+>> Migracion Componentes'
+
 INSERT INTO LOS_GEDDES.Componentes(comp_id,comp_descripcion)
 VALUES (1,'TRANSMISION'),
        (2,'CAJA'),
        (3,'MOTOR');
+GO
 
 --Tipo Componentes
+print '
+>> Migracion Tipo_componentes'
+
 INSERT INTO LOS_GEDDES.Tipo_componentes(tcom_componente,tcom_codigo,tcom_descripcion)
 (
     SELECT DISTINCT 1,TIPO_TRANSMISION_CODIGO,TIPO_TRANSMISION_DESC
@@ -266,14 +287,22 @@ INSERT INTO LOS_GEDDES.Tipo_componentes(tcom_componente,tcom_codigo,tcom_descrip
     FROM gd_esquema.Maestra
     WHERE TIPO_MOTOR_CODIGO IS NOT NULL
 )
+GO
 
 --Fabricantes
+print '
+>> Migracion Fabricantes'
+
 INSERT INTO LOS_GEDDES.Fabricantes(fabr_nombre)
 SELECT DISTINCT FABRICANTE_NOMBRE
 FROM gd_esquema.Maestra
 WHERE FABRICANTE_NOMBRE IS NOT NULL;
+GO
 
 --Modelos Automoviles
+print '
+>> Migracion Modelos_automoviles'
+
 INSERT INTO LOS_GEDDES.Modelos_automoviles(mode_codigo,mode_nombre,mode_potencia,mode_fabricante,
     mode_tipo_auto,mode_tipo_transmision,mode_tipo_motor,mode_tipo_caja_cambios,mode_cantidad_cambios)
 SELECT DISTINCT 
@@ -286,9 +315,10 @@ JOIN LOS_GEDDES.Tipo_componentes tcc on tcc.tcom_codigo = m.TIPO_CAJA_CODIGO and
 JOIN LOS_GEDDES.Tipo_componentes tcm on tcm.tcom_codigo = m.TIPO_MOTOR_CODIGO and tcm.tcom_componente = 3
 WHERE m.MODELO_CODIGO IS NOT NULL and m.TIPO_TRANSMISION_CODIGO is not null 
     and m.TIPO_CAJA_CODIGO is not null and m.TIPO_MOTOR_CODIGO is not null;
+GO
 
--------------------------- matias--------------------------------------------
 --Autopartes
+print '>> Migracion autopartes'
 INSERT INTO LOS_GEDDES.Autopartes
 (apte_codigo, apte_descripcion, apte_modelo_auto, apte_fabricante)
 (
@@ -299,16 +329,27 @@ INSERT INTO LOS_GEDDES.Autopartes
 		where AUTO_PARTE_CODIGO is not null
 );
 
-/*
+-- Clientes
+print '>> Migracion clientes'
+INSERT INTO LOS_GEDDES.Clientes       
+		SELECT DISTINCT CLIENTE_DNI, CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_DIRECCION, CLIENTE_FECHA_NAC, 
+						CLIENTE_MAIL, NULL
+		FROM gd_esquema.Maestra 
+		WHERE CLIENTE_DNI IS NOT NULL
+GO
+
+
 --Compra Automoviles
+print '
+>> Migracion Compras de automoviles'
 insert into LOS_GEDDES.Compras
 (cpra_numero, cpra_fecha, cpra_precio_total, cpra_sucursal, cpra_automovil, cpra_cliente)
 (
 	select distinct COMPRA_NRO, COMPRA_FECHA, COMPRA_PRECIO, s.sucu_id, a.auto_id, c.clie_id
 		from gd_esquema.Maestra maestra
 		join LOS_GEDDES.Automoviles a on
-			a.auto_patente = maestra.auto_patente 
-			and a.auto_nro_chasis = maestra.auto_nro_chasis
+			a.auto_patente = maestra.AUTO_PATENTE
+			and a.auto_nro_chasis = maestra.AUTO_NRO_CHASIS
 		join LOS_GEDDES.Sucursales s on 
 			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
 		join LOS_GEDDES.Clientes c on 
@@ -320,6 +361,8 @@ insert into LOS_GEDDES.Compras
 );
 
 --Compras de autopartes
+print '
+>> Migracion Compras de Autopartes'
 insert into LOS_GEDDES.Compras
 (cpra_numero, cpra_fecha, cpra_sucursal, cpra_cliente)
 (
@@ -333,6 +376,8 @@ insert into LOS_GEDDES.Compras
 );
 
 -- Items por compra
+print '
+>> Migracion Items por compra'
 insert into LOS_GEDDES.Items_por_compra
 (ipco_id_compra, ipco_id_autoparte, ipco_cantidad, ipco_precio)
 (
@@ -341,9 +386,72 @@ insert into LOS_GEDDES.Items_por_compra
 	group by compra_nro, AUTO_PARTE_CODIGO, COMPRA_PRECIO
 );
 
+print '
+>> Calculo de precio de compras de autopartes'
 update LOS_GEDDES.Compras
 set cpra_precio_total = (
 	select sum(ipco_precio) 
 	from LOS_GEDDES.Items_por_compra where cpra_numero = ipco_id_compra
 );
-*/
+
+
+ --Facturas
+print '
+>> Migracion facturas'
+
+IF OBJECT_ID('tempdb..#facturas') IS NOT NULL
+	DROP TABLE #facturas
+
+CREATE TABLE #facturas(
+	[nro] [decimal](18, 0),
+	[fecha] [datetime2](3),
+	[cant_facturada] [decimal](18, 0),
+	[cliente_dni] [decimal](18, 0),
+	[cliente_nombre] [nvarchar](255),
+	[cliente_apellido] [nvarchar](255),
+	[sucursal_direccion] [nvarchar](255),
+	[sucursal_mail] [nvarchar](255),
+	[sucursal_telefono] [decimal](18, 0),
+	[auto_nro_chasis] [nvarchar](50))
+
+INSERT INTO #facturas
+SELECT DISTINCT FACTURA_NRO, FACTURA_FECHA, CANT_FACTURADA, CLIENTE_DNI, CLIENTE_NOMBRE, 
+	CLIENTE_APELLIDO, FAC_SUCURSAL_DIRECCION, FAC_SUCURSAL_MAIL, FAC_SUCURSAL_TELEFONO,
+	AUTO_NRO_CHASIS
+	FROM gd_esquema.Maestra
+	WHERE FACTURA_NRO IS NOT NULL
+
+INSERT INTO LOS_GEDDES.Facturas
+		
+		SELECT DISTINCT f.nro, f.fecha, c.clie_id, s.sucu_id, 
+		NULL, c.clie_direccion, c.clie_mail
+		FROM #facturas f
+		INNER JOIN LOS_GEDDES.Clientes c 
+			ON c.clie_dni = f.cliente_dni
+				AND c.clie_apellido = f.cliente_apellido  
+				AND c.clie_nombre = f.cliente_nombre 
+		INNER JOIN LOS_GEDDES.Sucursales s
+			ON s.sucu_direccion = f.sucursal_direccion 
+			   AND s.sucu_mail = f.sucursal_mail
+			   AND s.sucu_telefono = f.sucursal_telefono
+			   --LEFT JOIN LOS_GEDDES.Ciudades d on d.ciud_id = s.sucu_id AND d.ciud_nombre = m.FAC_SUCURSAL_CIUDAD
+		WHERE f.cant_facturada IS NOT NULL -- Facturas de autopartes
+
+		UNION
+
+		SELECT DISTINCT f.nro, f.fecha, c.clie_id, s.sucu_id, 
+		a.auto_id, c.clie_direccion, c.clie_mail
+		FROM #facturas f
+		INNER JOIN LOS_GEDDES.Automoviles a 
+			ON a.auto_nro_chasis = f.auto_nro_chasis -- revisar cuando este la tabla automoviles completa
+		INNER JOIN LOS_GEDDES.Clientes c 
+			ON c.clie_dni = f.cliente_dni
+				AND c.clie_apellido = f.cliente_apellido  
+				AND c.clie_nombre = f.cliente_nombre 
+		INNER JOIN LOS_GEDDES.Sucursales s
+			ON s.sucu_direccion = f.sucursal_direccion 
+			   AND s.sucu_mail = f.sucursal_mail
+			   AND s.sucu_telefono = f.sucursal_telefono
+			   --LEFT JOIN LOS_GEDDES.Ciudades d on d.ciud_id = s.sucu_id AND d.ciud_nombre = m.FAC_SUCURSAL_CIUDAD
+		WHERE f.cant_facturada IS NULL -- Facturas de autos
+GO
