@@ -386,14 +386,8 @@ insert into LOS_GEDDES.Items_por_compra
 (ipco_id_compra, ipco_id_autoparte, ipco_cantidad, ipco_precio)
 (
 	select distinct c.cpra_numero, apte_id, sum(COMPRA_CANT), COMPRA_PRECIO from gd_esquema.Maestra maestra
-		join LOS_GEDDES.Ciudades ciu on
-			ciu.ciud_nombre = maestra.SUCURSAL_CIUDAD
-		join LOS_GEDDES.Sucursales s on
-			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
-			and s.sucu_ciudad = ciu.ciud_id
 		join LOS_GEDDES.Compras c on
 			c.cpra_numero = maestra.COMPRA_NRO
-			and	c.cpra_sucursal = s.sucu_id
 		join LOS_GEDDES.Fabricantes f on
 			f.fabr_nombre = maestra.FABRICANTE_NOMBRE		
 		join LOS_GEDDES.Autopartes ap on
