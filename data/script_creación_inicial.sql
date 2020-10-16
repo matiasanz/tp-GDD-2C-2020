@@ -158,7 +158,6 @@ CREATE TABLE LOS_GEDDES.Compras(
   cpra_cliente       bigint NOT NULL
 
   CONSTRAINT PK_Compras PRIMARY KEY(cpra_id)
---  CONSTRAINT PK_Compras PRIMARY KEY(cpra_numero)
   CONSTRAINT FK_Compras_sucursal FOREIGN KEY(cpra_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
   CONSTRAINT FK_Compras_automovil FOREIGN KEY(cpra_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id),
   CONSTRAINT FK_Compras_cliente FOREIGN KEY(cpra_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id)
@@ -172,27 +171,28 @@ CREATE TABLE LOS_GEDDES.Categorias_autopartes(
 );
 
 CREATE TABLE LOS_GEDDES.Autopartes(
+  apte_id			  bigint IDENTITY(1,1),
   apte_codigo		  decimal(18,0) NOT NULL, 
   apte_descripcion	  nvarchar(255) NOT NULL,
   apte_modelo_auto    decimal(18,0) NOT NULL,
+  apte_fabricante	  bigint NOT NULL,
   apte_categoria      bigint
 
-  CONSTRAINT PK_Autopartes PRIMARY KEY(apte_codigo),
+  CONSTRAINT PK_Autopartes PRIMARY KEY(apte_id),
+  CONSTRAINT FK_Autopartes FOREIGN KEY(apte_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id),
   CONSTRAINT FK_Autopartes_modelo_auto FOREIGN KEY(apte_modelo_auto) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
   CONSTRAINT FK_Autoparte_categoria FOREIGN KEY(apte_categoria) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_compra (
   ipco_id_compra	bigint NOT NULL,
-  ipco_id_autoparte decimal(18,0) NOT NULL,
-  ipco_id_fabricante bigint NOT NULL,
+  ipco_id_autoparte bigint NOT NULL,
   ipco_cantidad	    decimal(18,0) NOT NULL,
   ipco_precio	    decimal(18,2) NOT NULL
 
-  --agregué pk_precio. Ver si se puede sacar
-  CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte, ipco_id_fabricante),
+  CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte),
   CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_id),
-  CONSTRAINT FK_Items_por_compra_id_autoparte FOREIGN KEY(ipco_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
+  CONSTRAINT FK_Items_por_compra_id_autoparte FOREIGN KEY(ipco_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_id)
 );
 
 CREATE TABLE LOS_GEDDES.Facturas(
@@ -213,13 +213,13 @@ CREATE TABLE LOS_GEDDES.Facturas(
 
 CREATE TABLE LOS_GEDDES.Items_por_factura(
   ipfa_id_factura	   bigint IDENTITY(1,1) NOT NULL,
-  ipfa_id_autoparte	   decimal(18,0) NOT NULL,
+  ipfa_id_autoparte	   bigint NOT NULL,
   ipfa_cantidad		   decimal(18,0) NOT NULL,
   ipfa_precio_facturado decimal(18,2) NOT NULL
 
   CONSTRAINT PK_Items_por_factura PRIMARY KEY (ipfa_id_factura, ipfa_id_autoparte),
   CONSTRAINT FK_Items_por_factura_id_factura FOREIGN KEY(ipfa_id_factura  ) REFERENCES LOS_GEDDES.Facturas(fact_id),
-  CONSTRAINT FK_Items_por_factura_id_autoparte FOREIGN KEY(ipfa_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
+  CONSTRAINT FK_Items_por_factura_id_autoparte FOREIGN KEY(ipfa_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_id)
 );
 GO
 
@@ -321,10 +321,12 @@ GO
 --Autopartes
 print '>> Migracion autopartes'
 INSERT INTO LOS_GEDDES.Autopartes
-(apte_codigo, apte_descripcion, apte_modelo_auto)
+(apte_codigo, apte_descripcion, apte_modelo_auto, apte_fabricante)
 (
-	SELECT DISTINCT AUTO_PARTE_CODIGO, AUTO_PARTE_DESCRIPCION, MODELO_CODIGO
+	SELECT DISTINCT AUTO_PARTE_CODIGO, AUTO_PARTE_DESCRIPCION, MODELO_CODIGO, fabr_id
 		from gd_esquema.Maestra maestra
+		join LOS_GEDDES.Fabricantes fabr on
+			fabr.fabr_nombre = maestra.FABRICANTE_NOMBRE
 		where AUTO_PARTE_CODIGO is not null
 );
 
@@ -351,6 +353,7 @@ insert into LOS_GEDDES.Compras
 			and a.auto_nro_chasis = maestra.AUTO_NRO_CHASIS
 		join LOS_GEDDES.Sucursales s on 
 			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
+			and s.sucu_ciudad = maestra.SUCURSAL_CIUDAD
 		join LOS_GEDDES.Clientes c on 
 			c.clie_dni = CLIENTE_DNI
 			and c.clie_nombre = CLIENTE_NOMBRE 
@@ -381,21 +384,24 @@ insert into LOS_GEDDES.Compras
 print '
 >> Migracion Items por compra'
 insert into LOS_GEDDES.Items_por_compra
-(ipco_id_compra, ipco_id_autoparte, ipco_id_fabricante, ipco_cantidad, ipco_precio)
+(ipco_id_compra, ipco_id_autoparte, ipco_cantidad, ipco_precio)
 (
-	select distinct c.cpra_id, AUTO_PARTE_CODIGO, fabr_id, sum(COMPRA_CANT), COMPRA_PRECIO from gd_esquema.Maestra maestra
+	select distinct c.cpra_id, apte_id, sum(COMPRA_CANT), COMPRA_PRECIO from gd_esquema.Maestra maestra
 		join LOS_GEDDES.Ciudades ciu on
 			ciu.ciud_nombre = maestra.SUCURSAL_CIUDAD
 		join LOS_GEDDES.Sucursales s on
 			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
 			and s.sucu_ciudad = ciu.ciud_id
-		join LOS_GEDDES.Fabricantes f on
-			f.fabr_nombre = maestra.FABRICANTE_NOMBRE
 		join LOS_GEDDES.Compras c on
 			c.cpra_numero = maestra.COMPRA_NRO
-			and	c.cpra_sucursal = s.sucu_id	
+			and	c.cpra_sucursal = s.sucu_id
+		join LOS_GEDDES.Fabricantes f on
+			f.fabr_nombre = maestra.FABRICANTE_NOMBRE		
+		join LOS_GEDDES.Autopartes ap on
+			ap.apte_codigo = maestra.AUTO_PARTE_CODIGO
+			and ap.apte_fabricante = fabr_id
 		where COMPRA_NRO is not null and AUTO_PARTE_CODIGO is not null
-		group by cpra_id, AUTO_PARTE_CODIGO, fabr_id, COMPRA_PRECIO
+		group by cpra_id, apte_id, fabr_id, COMPRA_PRECIO
 );
 
 print '
