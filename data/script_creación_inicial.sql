@@ -149,7 +149,6 @@ CREATE TABLE LOS_GEDDES.Clientes(
 );
 
 CREATE TABLE LOS_GEDDES.Compras(
-  cpra_id			 bigint IDENTITY(1,1) NOT NULL,
   cpra_numero        decimal(18,0) NOT NULL,
   cpra_fecha         datetime2(3) NOT NULL,
   cpra_precio_total  decimal(18,2), --NOT NULL, <--En la compra de autopartes se carga despues
@@ -157,7 +156,7 @@ CREATE TABLE LOS_GEDDES.Compras(
   cpra_automovil     bigint,
   cpra_cliente       bigint NOT NULL
 
-  CONSTRAINT PK_Compras PRIMARY KEY(cpra_id)
+  CONSTRAINT PK_Compras PRIMARY KEY(cpra_numero)
   CONSTRAINT FK_Compras_sucursal FOREIGN KEY(cpra_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
   CONSTRAINT FK_Compras_automovil FOREIGN KEY(cpra_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id),
   CONSTRAINT FK_Compras_cliente FOREIGN KEY(cpra_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id)
@@ -185,13 +184,13 @@ CREATE TABLE LOS_GEDDES.Autopartes(
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_compra (
-  ipco_id_compra	bigint NOT NULL,
+  ipco_id_compra	decimal(18,0) NOT NULL,
   ipco_id_autoparte bigint NOT NULL,
   ipco_cantidad	    decimal(18,0) NOT NULL,
   ipco_precio	    decimal(18,2) NOT NULL
 
   CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte),
-  CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_id),
+  CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_numero),
   CONSTRAINT FK_Items_por_compra_id_autoparte FOREIGN KEY(ipco_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_id)
 );
 
@@ -386,7 +385,7 @@ print '
 insert into LOS_GEDDES.Items_por_compra
 (ipco_id_compra, ipco_id_autoparte, ipco_cantidad, ipco_precio)
 (
-	select distinct c.cpra_id, apte_id, sum(COMPRA_CANT), COMPRA_PRECIO from gd_esquema.Maestra maestra
+	select distinct c.cpra_numero, apte_id, sum(COMPRA_CANT), COMPRA_PRECIO from gd_esquema.Maestra maestra
 		join LOS_GEDDES.Ciudades ciu on
 			ciu.ciud_nombre = maestra.SUCURSAL_CIUDAD
 		join LOS_GEDDES.Sucursales s on
@@ -401,7 +400,7 @@ insert into LOS_GEDDES.Items_por_compra
 			ap.apte_codigo = maestra.AUTO_PARTE_CODIGO
 			and ap.apte_fabricante = fabr_id
 		where COMPRA_NRO is not null and AUTO_PARTE_CODIGO is not null
-		group by cpra_id, apte_id, fabr_id, COMPRA_PRECIO
+		group by cpra_numero, apte_id, fabr_id, COMPRA_PRECIO
 );
 
 print '
@@ -409,7 +408,7 @@ print '
 update LOS_GEDDES.Compras
 set cpra_precio_total = (
 	select sum(ipco_precio) 
-	from LOS_GEDDES.Items_por_compra where cpra_id = ipco_id_compra
+	from LOS_GEDDES.Items_por_compra where cpra_numero = ipco_id_compra
 );
 
 
