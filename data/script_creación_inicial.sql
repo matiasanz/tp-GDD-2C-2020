@@ -401,9 +401,10 @@ print '
 >> Calculo de precio de compras de autopartes'
 update LOS_GEDDES.Compras
 set cpra_precio_total = (
-	select sum(ipco_precio) 
-	from LOS_GEDDES.Items_por_compra where cpra_numero = ipco_id_compra
-);
+	select sum(ipco_precio*ipco_cantidad) 
+		from LOS_GEDDES.Items_por_compra
+		where cpra_numero = ipco_id_compra
+)   where cpra_automovil is null;
 
 
  --Facturas
