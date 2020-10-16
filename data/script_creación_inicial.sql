@@ -149,6 +149,7 @@ CREATE TABLE LOS_GEDDES.Clientes(
 );
 
 CREATE TABLE LOS_GEDDES.Compras(
+  cpra_id			 bigint IDENTITY(1,1) NOT NULL,
   cpra_numero        decimal(18,0) NOT NULL,
   cpra_fecha         datetime2(3) NOT NULL,
   cpra_precio_total  decimal(18,2), --NOT NULL, <--En la compra de autopartes se carga despues
@@ -156,7 +157,8 @@ CREATE TABLE LOS_GEDDES.Compras(
   cpra_automovil     bigint,
   cpra_cliente       bigint NOT NULL
 
-  CONSTRAINT PK_Compras PRIMARY KEY(cpra_numero)
+  CONSTRAINT PK_Compras PRIMARY KEY(cpra_id)
+--  CONSTRAINT PK_Compras PRIMARY KEY(cpra_numero)
   CONSTRAINT FK_Compras_sucursal FOREIGN KEY(cpra_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
   CONSTRAINT FK_Compras_automovil FOREIGN KEY(cpra_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id),
   CONSTRAINT FK_Compras_cliente FOREIGN KEY(cpra_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id)
@@ -173,24 +175,23 @@ CREATE TABLE LOS_GEDDES.Autopartes(
   apte_codigo		  decimal(18,0) NOT NULL, 
   apte_descripcion	  nvarchar(255) NOT NULL,
   apte_modelo_auto    decimal(18,0) NOT NULL,
-  apte_fabricante     bigint NOT NULL,
   apte_categoria      bigint
 
   CONSTRAINT PK_Autopartes PRIMARY KEY(apte_codigo),
   CONSTRAINT FK_Autopartes_modelo_auto FOREIGN KEY(apte_modelo_auto) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
-  CONSTRAINT FK_Autopartes_fabricante FOREIGN KEY(apte_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id),
   CONSTRAINT FK_Autoparte_categoria FOREIGN KEY(apte_categoria) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_compra (
-  ipco_id_compra	decimal(18,0) NOT NULL,
+  ipco_id_compra	bigint NOT NULL,
   ipco_id_autoparte decimal(18,0) NOT NULL,
+  ipco_id_fabricante bigint NOT NULL,
   ipco_cantidad	    decimal(18,0) NOT NULL,
   ipco_precio	    decimal(18,2) NOT NULL
 
   --agregué pk_precio. Ver si se puede sacar
-  CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte, ipco_precio),
-  CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_numero),
+  CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte, ipco_id_fabricante),
+  CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_id),
   CONSTRAINT FK_Items_por_compra_id_autoparte FOREIGN KEY(ipco_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
 );
 
@@ -320,12 +321,10 @@ GO
 --Autopartes
 print '>> Migracion autopartes'
 INSERT INTO LOS_GEDDES.Autopartes
-(apte_codigo, apte_descripcion, apte_modelo_auto, apte_fabricante)
+(apte_codigo, apte_descripcion, apte_modelo_auto)
 (
-	SELECT DISTINCT AUTO_PARTE_CODIGO, AUTO_PARTE_DESCRIPCION, MODELO_CODIGO, fab.fabr_id 
+	SELECT DISTINCT AUTO_PARTE_CODIGO, AUTO_PARTE_DESCRIPCION, MODELO_CODIGO
 		from gd_esquema.Maestra maestra
-		join LOS_GEDDES.Fabricantes fab on 
-			fab.fabr_nombre = maestra.FABRICANTE_NOMBRE
 		where AUTO_PARTE_CODIGO is not null
 );
 
@@ -366,24 +365,37 @@ print '
 insert into LOS_GEDDES.Compras
 (cpra_numero, cpra_fecha, cpra_sucursal, cpra_cliente)
 (
-	select distinct COMPRA_NRO, COMPRA_FECHA, s.sucu_id, c.clie_id from gd_esquema.Maestra maestra
+	select distinct COMPRA_NRO, COMPRA_FECHA, s.sucu_id, com.clie_id from gd_esquema.Maestra maestra
+		join LOS_GEDDES.Ciudades ciu on
+			ciu.ciud_nombre = maestra.Sucursal_ciudad
 		join LOS_GEDDES.Sucursales s on 
 			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
-		join LOS_GEDDES.Clientes c on 
-			c.clie_dni = CLIENTE_DNI 
-			and c.clie_nombre = CLIENTE_NOMBRE 
-			and c.clie_apellido=CLIENTE_APELLIDO
+			and s.sucu_ciudad = ciu.ciud_id
+		join LOS_GEDDES.Clientes com on 
+			com.clie_dni = CLIENTE_DNI 
+			and com.clie_nombre = CLIENTE_NOMBRE 
+			and com.clie_apellido=CLIENTE_APELLIDO
 );
 
 -- Items por compra
 print '
 >> Migracion Items por compra'
 insert into LOS_GEDDES.Items_por_compra
-(ipco_id_compra, ipco_id_autoparte, ipco_cantidad, ipco_precio)
+(ipco_id_compra, ipco_id_autoparte, ipco_id_fabricante, ipco_cantidad, ipco_precio)
 (
-	select distinct COMPRA_NRO, AUTO_PARTE_CODIGO, sum(COMPRA_CANT), COMPRA_PRECIO from gd_esquema.Maestra maestra
-	where COMPRA_NRO is not null and AUTO_PARTE_CODIGO is not null
-	group by compra_nro, AUTO_PARTE_CODIGO, COMPRA_PRECIO
+	select distinct c.cpra_id, AUTO_PARTE_CODIGO, fabr_id, sum(COMPRA_CANT), COMPRA_PRECIO from gd_esquema.Maestra maestra
+		join LOS_GEDDES.Ciudades ciu on
+			ciu.ciud_nombre = maestra.SUCURSAL_CIUDAD
+		join LOS_GEDDES.Sucursales s on
+			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
+			and s.sucu_ciudad = ciu.ciud_id
+		join LOS_GEDDES.Fabricantes f on
+			f.fabr_nombre = maestra.FABRICANTE_NOMBRE
+		join LOS_GEDDES.Compras c on
+			c.cpra_numero = maestra.COMPRA_NRO
+			and	c.cpra_sucursal = s.sucu_id	
+		where COMPRA_NRO is not null and AUTO_PARTE_CODIGO is not null
+		group by cpra_id, AUTO_PARTE_CODIGO, fabr_id, COMPRA_PRECIO
 );
 
 print '
@@ -391,7 +403,7 @@ print '
 update LOS_GEDDES.Compras
 set cpra_precio_total = (
 	select sum(ipco_precio) 
-	from LOS_GEDDES.Items_por_compra where cpra_numero = ipco_id_compra
+	from LOS_GEDDES.Items_por_compra where cpra_id = ipco_id_compra
 );
 
 
