@@ -339,32 +339,69 @@ INSERT INTO LOS_GEDDES.Clientes
 		WHERE CLIENTE_DNI IS NOT NULL
 GO
 
+print '
+>> Migracion Automoviles'
+
+insert into LOS_GEDDES.Automoviles
+(auto_nro_chasis, auto_nro_motor, auto_patente, auto_fecha_alta, auto_cant_kms, auto_modelo)
+(
+	SELECT DISTINCT AUTO_NRO_CHASIS, AUTO_NRO_MOTOR, AUTO_PATENTE, AUTO_FECHA_ALTA, max(AUTO_CANT_KMS), MODELO_CODIGO
+		from gd_esquema.Maestra
+		where AUTO_NRO_CHASIS is not null
+		group by AUTO_NRO_CHASIS, AUTO_PATENTE, AUTO_NRO_MOTOR, MODELO_CODIGO, AUTO_FECHA_ALTA
+);
+
 --Compra Automoviles
 print '
->> Migracion Compras de automoviles'
+>> Migracion Compras de Automoviles'
+
 insert into LOS_GEDDES.Compras
 (cpra_numero, cpra_fecha, cpra_precio_total, cpra_sucursal, cpra_automovil, cpra_cliente)
 (
-	select distinct COMPRA_NRO, COMPRA_FECHA, SUM(COMPRA_PRECIO), s.sucu_id, a.auto_id, clie_id
+	select distinct COMPRA_NRO, COMPRA_FECHA, COMPRA_PRECIO, s.sucu_id, a.auto_id, clie_id
 		from gd_esquema.Maestra maestra
-		left join LOS_GEDDES.Automoviles a on
-			a.auto_patente = maestra.AUTO_PATENTE
-			and a.auto_nro_chasis = maestra.AUTO_NRO_CHASIS
-		--
 		join LOS_GEDDES.Ciudades on
-			ciud_nombre = maestra.SUCURSAL_CIUDAD
+			ciud_nombre = SUCURSAL_CIUDAD
 		join LOS_GEDDES.Sucursales s on 
-			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
+			s.sucu_direccion = SUCURSAL_DIRECCION
 			and s.sucu_ciudad = ciud_id
 		join LOS_GEDDES.Clientes on 
 			clie_dni = CLIENTE_DNI
 			and clie_nombre   = CLIENTE_NOMBRE 
 			and clie_apellido = CLIENTE_APELLIDO
-		where maestra.COMPRA_NRO is not null
-		group by COMPRA_NRO, COMPRA_FECHA, SUCU_ID, auto_id, clie_id
-		--En teoria deberia alcanzar con COMPRA_NRO, pero si saco los demas se queja.
-		--Lo raro es que COMPRA_NRO es PK, con lo cual si dependiera de otra cosa romperia
+		--
+		join LOS_GEDDES.Automoviles a on
+			a.auto_patente = maestra.AUTO_PATENTE
+			and a.auto_nro_chasis = maestra.AUTO_NRO_CHASIS
+			and a.auto_nro_motor = maestra.AUTO_NRO_MOTOR
+		
+		where maestra.COMPRA_NRO is not null		
+		group by COMPRA_NRO, COMPRA_FECHA, COMPRA_PRECIO, SUCU_ID, auto_id, clie_id
 );
+
+print '
+>> Migracion Compras de Autopartes'
+
+insert into LOS_GEDDES.Compras
+(cpra_numero, cpra_fecha, cpra_precio_total, cpra_sucursal, cpra_cliente)
+(
+	select distinct COMPRA_NRO, COMPRA_FECHA, SUM(COMPRA_CANT*COMPRA_PRECIO) as [precio total], s.sucu_id, clie_id
+		from gd_esquema.Maestra maestra
+		join LOS_GEDDES.Ciudades on
+			ciud_nombre = SUCURSAL_CIUDAD
+		join LOS_GEDDES.Sucursales s on 
+			s.sucu_direccion = SUCURSAL_DIRECCION
+			and s.sucu_ciudad = ciud_id
+		join LOS_GEDDES.Clientes on 
+			clie_dni = CLIENTE_DNI
+			and clie_nombre   = CLIENTE_NOMBRE 
+			and clie_apellido = CLIENTE_APELLIDO
+		
+		where maestra.COMPRA_NRO is not null and AUTO_PATENTE is null
+			
+		group by COMPRA_NRO, COMPRA_FECHA, SUCU_ID, clie_id
+);
+
 
 -- Items por compra
 print '
@@ -383,16 +420,6 @@ insert into LOS_GEDDES.Items_por_compra
 		where COMPRA_NRO is not null and AUTO_PARTE_CODIGO is not null
 		group by cpra_numero, apte_id, fabr_id, COMPRA_PRECIO
 );
-
-print '
->> Calculo de precio de compras de autopartes'
-update LOS_GEDDES.Compras
-set cpra_precio_total = (
-	select sum(ipco_precio*ipco_cantidad) 
-		from LOS_GEDDES.Items_por_compra
-		where cpra_numero = ipco_id_compra
-)   where cpra_automovil is null;
-
 
  --Facturas
 print '
