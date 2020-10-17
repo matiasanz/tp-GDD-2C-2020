@@ -211,7 +211,7 @@ CREATE TABLE LOS_GEDDES.Facturas(
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_factura(
-  ipfa_id_factura	   bigint IDENTITY(1,1) NOT NULL,
+  ipfa_id_factura	   bigint NOT NULL,
   ipfa_id_autoparte	   bigint NOT NULL,
   ipfa_cantidad		   decimal(18,0) NOT NULL,
   ipfa_precio_facturado decimal(18,2) NOT NULL
@@ -318,7 +318,8 @@ WHERE m.MODELO_CODIGO IS NOT NULL and m.TIPO_TRANSMISION_CODIGO is not null
 GO
 
 --Autopartes
-print '>> Migracion autopartes'
+print '
+>> Migracion autopartes'
 INSERT INTO LOS_GEDDES.Autopartes
 (apte_codigo, apte_descripcion, apte_modelo_auto, apte_fabricante)
 (
@@ -466,4 +467,32 @@ INSERT INTO LOS_GEDDES.Facturas
 			   AND s.sucu_telefono = f.sucursal_telefono
 			   --LEFT JOIN LOS_GEDDES.Ciudades d on d.ciud_id = s.sucu_id AND d.ciud_nombre = m.FAC_SUCURSAL_CIUDAD
 		WHERE f.cant_facturada IS NULL -- Facturas de autos
+
+print '
+>> migracion items_por_factura'
+
+INSERT INTO LOS_GEDDES.Items_por_factura
+(ipfa_id_factura, ipfa_id_autoparte, ipfa_cantidad, ipfa_precio_facturado)
+(
+	SELECT DISTINCT fact_id, apte_id, CANT_FACTURADA, PRECIO_FACTURADO
+		from gd_esquema.Maestra
+		join LOS_GEDDES.Fabricantes on
+			fabr_nombre = FABRICANTE_NOMBRE
+		join LOS_GEDDES.Autopartes on
+			apte_codigo = AUTO_PARTE_CODIGO
+			and apte_fabricante = fabr_id
+			--
+		join LOS_GEDDES.Ciudades on
+			ciud_nombre = FAC_SUCURSAL_CIUDAD
+		join LOS_GEDDES.Sucursales on
+			sucu_ciudad = ciud_id
+		join LOS_GEDDES.Facturas on
+			fact_numero = FACTURA_NRO
+			and fact_sucursal = sucu_id	
+		where 
+			FACTURA_NRO is not null 
+			and AUTO_PARTE_CODIGO is not null
+);
+
+
 GO
