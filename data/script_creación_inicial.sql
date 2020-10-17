@@ -339,45 +339,31 @@ INSERT INTO LOS_GEDDES.Clientes
 		WHERE CLIENTE_DNI IS NOT NULL
 GO
 
-
 --Compra Automoviles
 print '
 >> Migracion Compras de automoviles'
 insert into LOS_GEDDES.Compras
 (cpra_numero, cpra_fecha, cpra_precio_total, cpra_sucursal, cpra_automovil, cpra_cliente)
 (
-	select distinct COMPRA_NRO, COMPRA_FECHA, COMPRA_PRECIO, s.sucu_id, a.auto_id, c.clie_id
+	select distinct COMPRA_NRO, COMPRA_FECHA, SUM(COMPRA_PRECIO), s.sucu_id, a.auto_id, clie_id
 		from gd_esquema.Maestra maestra
-		join LOS_GEDDES.Automoviles a on
+		left join LOS_GEDDES.Automoviles a on
 			a.auto_patente = maestra.AUTO_PATENTE
 			and a.auto_nro_chasis = maestra.AUTO_NRO_CHASIS
+		--
+		join LOS_GEDDES.Ciudades on
+			ciud_nombre = maestra.SUCURSAL_CIUDAD
 		join LOS_GEDDES.Sucursales s on 
 			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
-			and s.sucu_ciudad = maestra.SUCURSAL_CIUDAD
-		join LOS_GEDDES.Clientes c on 
-			c.clie_dni = CLIENTE_DNI
-			and c.clie_nombre = CLIENTE_NOMBRE 
-			and c.clie_apellido=CLIENTE_APELLIDO
-		where COMPRA_PRECIO is not null
-			and MAESTRA.AUTO_PATENTE is not null
-);
-
---Compras de autopartes
-print '
->> Migracion Compras de Autopartes'
-insert into LOS_GEDDES.Compras
-(cpra_numero, cpra_fecha, cpra_sucursal, cpra_cliente)
-(
-	select distinct COMPRA_NRO, COMPRA_FECHA, s.sucu_id, com.clie_id from gd_esquema.Maestra maestra
-		join LOS_GEDDES.Ciudades ciu on
-			ciu.ciud_nombre = maestra.Sucursal_ciudad
-		join LOS_GEDDES.Sucursales s on 
-			s.sucu_direccion = maestra.SUCURSAL_DIRECCION
-			and s.sucu_ciudad = ciu.ciud_id
-		join LOS_GEDDES.Clientes com on 
-			com.clie_dni = CLIENTE_DNI 
-			and com.clie_nombre = CLIENTE_NOMBRE 
-			and com.clie_apellido=CLIENTE_APELLIDO
+			and s.sucu_ciudad = ciud_id
+		join LOS_GEDDES.Clientes on 
+			clie_dni = CLIENTE_DNI
+			and clie_nombre   = CLIENTE_NOMBRE 
+			and clie_apellido = CLIENTE_APELLIDO
+		where maestra.COMPRA_NRO is not null
+		group by COMPRA_NRO, COMPRA_FECHA, SUCU_ID, auto_id, clie_id
+		--En teoria deberia alcanzar con COMPRA_NRO, pero si saco los demas se queja.
+		--Lo raro es que COMPRA_NRO es PK, con lo cual si dependiera de otra cosa romperia
 );
 
 -- Items por compra
