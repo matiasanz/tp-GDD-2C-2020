@@ -134,6 +134,8 @@ CREATE TABLE LOS_GEDDES.Automoviles(
   CONSTRAINT FK_Automoviles_modelo FOREIGN KEY(auto_modelo) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
 );
 
+CREATE UNIQUE NONCLUSTERED INDEX IX_Automoviles_auto_nro_chasis ON LOS_GEDDES.Automoviles (auto_nro_chasis)
+
 CREATE TABLE LOS_GEDDES.Clientes(
   clie_id		 bigint IDENTITY(1,1) NOT NULL,
   clie_dni		 decimal(18,0) NOT NULL,
@@ -266,6 +268,7 @@ VALUES (@Id_Transmision,'TRANSMISION'),
        (@Id_Caja,'CAJA'),
        (@Id_Motor,'MOTOR');
 
+
 --Tipo Componentes
 print '
 >> Migracion Tipo_componentes'
@@ -289,6 +292,7 @@ INSERT INTO LOS_GEDDES.Tipo_componentes(tcom_componente,tcom_codigo,tcom_descrip
     WHERE TIPO_MOTOR_CODIGO IS NOT NULL
 )
 
+
 --Fabricantes
 print '
 >> Migracion Fabricantes'
@@ -297,6 +301,7 @@ INSERT INTO LOS_GEDDES.Fabricantes(fabr_nombre)
 SELECT DISTINCT FABRICANTE_NOMBRE
 FROM gd_esquema.Maestra
 WHERE FABRICANTE_NOMBRE IS NOT NULL;
+
 
 --Modelos Automoviles
 print '
@@ -497,3 +502,9 @@ INSERT INTO LOS_GEDDES.Items_por_factura
 
 DROP TABLE #facturas
 GO
+
+SELECT mig.*, statement AS table_name, column_id, column_name, column_usage
+FROM sys.dm_db_missing_index_details AS mid
+CROSS APPLY sys.dm_db_missing_index_columns (mid.index_handle)
+INNER JOIN sys.dm_db_missing_index_groups AS mig ON mig.index_handle = mid.index_handle
+ORDER BY mig.index_group_handle, mig.index_handle, column_id; 
