@@ -111,7 +111,7 @@ CREATE TABLE LOS_GEDDES.Modelos_automoviles(
   mode_tipo_transmision  bigint NOT NULL,
   mode_tipo_motor        bigint NOT NULL,
   mode_tipo_caja_cambios bigint NOT NULL,
-  mode_cantidad_cambios  smallint
+  mode_cantidad_cambios  smallint NULL
 
   CONSTRAINT PK_Modelos_automoviles PRIMARY KEY(mode_codigo),
   CONSTRAINT FK_Modelos_automoviles_fabricante FOREIGN KEY(mode_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id),
@@ -308,7 +308,7 @@ print '
 INSERT INTO LOS_GEDDES.Modelos_automoviles(mode_codigo,mode_nombre,mode_potencia,mode_fabricante,
     mode_tipo_auto,mode_tipo_transmision,mode_tipo_motor,mode_tipo_caja_cambios,mode_cantidad_cambios)
 SELECT DISTINCT 
-    MODELO_CODIGO,MODELO_NOMBRE,MODELO_POTENCIA,f.fabr_id,ta.taut_codigo,tct.tcom_id trasmicion,tcm.tcom_id motor,tcc.tcom_id caja,0
+    MODELO_CODIGO,MODELO_NOMBRE,MODELO_POTENCIA,f.fabr_id,ta.taut_codigo,tct.tcom_id trasmicion,tcm.tcom_id motor,tcc.tcom_id caja, NULL
 FROM gd_esquema.Maestra m
 JOIN LOS_GEDDES.Fabricantes f on f.fabr_nombre = m.FABRICANTE_NOMBRE
 JOIN LOS_GEDDES.Tipos_automoviles ta on ta.taut_codigo = m.TIPO_AUTO_CODIGO
@@ -440,8 +440,8 @@ CREATE TABLE #facturas(
 	[precio_facturado] [decimal](18, 2))
 
 INSERT INTO #facturas
-SELECT DISTINCT FACTURA_NRO, FACTURA_FECHA, CANT_FACTURADA, CLIENTE_DNI, CLIENTE_NOMBRE, 
-	CLIENTE_APELLIDO, FAC_SUCURSAL_DIRECCION, FAC_SUCURSAL_MAIL, FAC_SUCURSAL_TELEFONO,
+SELECT DISTINCT FACTURA_NRO, FACTURA_FECHA, CANT_FACTURADA, FAC_CLIENTE_DNI, FAC_CLIENTE_NOMBRE, 
+	FAC_CLIENTE_APELLIDO, FAC_SUCURSAL_DIRECCION, FAC_SUCURSAL_MAIL, FAC_SUCURSAL_TELEFONO,
 	AUTO_NRO_CHASIS, AUTO_PARTE_CODIGO, PRECIO_FACTURADO
 	FROM gd_esquema.Maestra
 	WHERE FACTURA_NRO IS NOT NULL
