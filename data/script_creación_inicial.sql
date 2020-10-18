@@ -134,8 +134,6 @@ CREATE TABLE LOS_GEDDES.Automoviles(
   CONSTRAINT FK_Automoviles_modelo FOREIGN KEY(auto_modelo) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
 );
 
-CREATE UNIQUE NONCLUSTERED INDEX IX_Automoviles_auto_nro_chasis ON LOS_GEDDES.Automoviles (auto_nro_chasis)
-
 CREATE TABLE LOS_GEDDES.Clientes(
   clie_id		 bigint IDENTITY(1,1) NOT NULL,
   clie_dni		 decimal(18,0) NOT NULL,
@@ -433,9 +431,6 @@ GO
 print '
 >> Migracion facturas'
 
---IF OBJECT_ID('tempdb..#facturas') IS NOT NULL
-	
-
 CREATE TABLE #facturas(
 	[nro] [decimal](18, 0),
 	[fecha] [datetime2](3),
@@ -470,7 +465,6 @@ INSERT INTO LOS_GEDDES.Facturas
 			ON s.sucu_direccion = f.sucursal_direccion 
 			   AND s.sucu_mail = f.sucursal_mail
 			   AND s.sucu_telefono = f.sucursal_telefono
-			   --LEFT JOIN LOS_GEDDES.Ciudades d on d.ciud_id = s.sucu_id AND d.ciud_nombre = m.FAC_SUCURSAL_CIUDAD
 		WHERE f.cant_facturada IS NOT NULL -- Facturas de autopartes
 
 		UNION ALL
@@ -488,7 +482,6 @@ INSERT INTO LOS_GEDDES.Facturas
 			ON s.sucu_direccion = f.sucursal_direccion 
 			   AND s.sucu_mail = f.sucursal_mail
 			   AND s.sucu_telefono = f.sucursal_telefono
-			   --LEFT JOIN LOS_GEDDES.Ciudades d on d.ciud_id = s.sucu_id AND d.ciud_nombre = m.FAC_SUCURSAL_CIUDAD
 		WHERE f.cant_facturada IS NULL -- Facturas de autos
 
 print '
@@ -502,9 +495,3 @@ INSERT INTO LOS_GEDDES.Items_por_factura
 
 DROP TABLE #facturas
 GO
-
-SELECT mig.*, statement AS table_name, column_id, column_name, column_usage
-FROM sys.dm_db_missing_index_details AS mid
-CROSS APPLY sys.dm_db_missing_index_columns (mid.index_handle)
-INNER JOIN sys.dm_db_missing_index_groups AS mig ON mig.index_handle = mid.index_handle
-ORDER BY mig.index_group_handle, mig.index_handle, column_id; 
