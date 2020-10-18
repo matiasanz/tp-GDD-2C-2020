@@ -228,9 +228,6 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionCiudades', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE LOS_GEDDES.MigracionCiudades AS
 BEGIN
-	print '
-	>> Migracion Ciudades:'
-
 	INSERT INTO LOS_GEDDES.Ciudades(ciud_nombre)
 	SELECT DISTINCT SUCURSAL_CIUDAD 
 	FROM gd_esquema.Maestra
@@ -244,9 +241,6 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionSucursales', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE LOS_GEDDES.MigracionSucursales AS
 BEGIN
-	print '
-	>> Migracion Sucursales'
-
 	INSERT INTO LOS_GEDDES.Sucursales(sucu_direccion,sucu_mail,sucu_telefono,sucu_ciudad)
 	SELECT DISTINCT SUCURSAL_DIRECCION,SUCURSAL_MAIL,SUCURSAL_TELEFONO,c.ciud_id
 	FROM gd_esquema.Maestra m
@@ -261,9 +255,6 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionTipoAutomoviles', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE LOS_GEDDES.MigracionTipoAutomoviles AS
 BEGIN
-	print '
-	>> Migracion Tipos_automoviles'
-
 	INSERT INTO LOS_GEDDES.Tipos_automoviles(taut_codigo,taut_descripcion)
 	SELECT DISTINCT TIPO_AUTO_CODIGO,TIPO_AUTO_DESC
 	FROM gd_esquema.Maestra
@@ -279,9 +270,6 @@ CREATE PROCEDURE LOS_GEDDES.MigracionComponentes
 @Id_Transmision bigint, @Id_Caja bigint, @Id_Motor bigint
 AS
 BEGIN
-	print '
-	>> Migracion Componentes'
-
 	INSERT INTO LOS_GEDDES.Componentes(comp_id,comp_descripcion)
 	VALUES (@Id_Transmision,'TRANSMISION'),
 		   (@Id_Caja,'CAJA'),
@@ -296,9 +284,6 @@ CREATE PROCEDURE LOS_GEDDES.MigracionTipoComponentes
 @Id_Transmision bigint, @Id_Caja bigint, @Id_Motor bigint
 AS
 BEGIN
-	print '
-	>> Migracion Tipo_componentes'
-
 	INSERT INTO LOS_GEDDES.Tipo_componentes(tcom_componente,tcom_codigo,tcom_descripcion)
 	(
 		SELECT DISTINCT @Id_Transmision,TIPO_TRANSMISION_CODIGO,TIPO_TRANSMISION_DESC
@@ -326,9 +311,6 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionFabricantes', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE LOS_GEDDES.MigracionFabricantes AS
 BEGIN
-	print '
-	>> Migracion Fabricantes'
-
 	INSERT INTO LOS_GEDDES.Fabricantes(fabr_nombre)
 	SELECT DISTINCT FABRICANTE_NOMBRE
 	FROM gd_esquema.Maestra
@@ -344,9 +326,6 @@ CREATE PROCEDURE LOS_GEDDES.MigracionModelosAutomoviles
 @Id_Transmision bigint, @Id_Caja bigint, @Id_Motor bigint
 AS
 BEGIN
-	print '
-	>> Migracion Modelos_automoviles'
-
 	INSERT INTO LOS_GEDDES.Modelos_automoviles(mode_codigo,mode_nombre,mode_potencia,mode_fabricante,
 		mode_tipo_auto,mode_tipo_transmision,mode_tipo_motor,mode_tipo_caja_cambios,mode_cantidad_cambios)
 	SELECT DISTINCT 
@@ -369,8 +348,6 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionAutopartes', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE LOS_GEDDES.MigracionAutopartes AS
 BEGIN
-	print '
-	>> Migracion autopartes'
 	INSERT INTO LOS_GEDDES.Autopartes
 	(apte_codigo, apte_descripcion, apte_modelo_auto, apte_fabricante)
 	(
@@ -389,7 +366,6 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionClientes', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE LOS_GEDDES.MigracionClientes AS
 BEGIN
-	print '>> Migracion clientes'
 	INSERT INTO LOS_GEDDES.Clientes       
 			SELECT DISTINCT CLIENTE_DNI, CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_DIRECCION, CLIENTE_FECHA_NAC, 
 							CLIENTE_MAIL, NULL
@@ -404,9 +380,6 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionAutomoviles', 'P') IS NOT NULL
 GO
 CREATE PROCEDURE LOS_GEDDES.MigracionAutomoviles AS
 BEGIN
-	print '
-	>> Migracion Automoviles'
-
 	insert into LOS_GEDDES.Automoviles
 	(auto_nro_chasis, auto_nro_motor, auto_patente, auto_fecha_alta, auto_cant_kms, auto_modelo)
 	(
@@ -425,7 +398,7 @@ CREATE PROCEDURE LOS_GEDDES.MigracionCompras AS
 BEGIN
 	--Compra Automoviles
 	print '
-	>> Migracion Compras de Automoviles'
+	* Compras de Automoviles'
 
 	insert into LOS_GEDDES.Compras
 	(cpra_numero, cpra_fecha, cpra_precio_total, cpra_sucursal, cpra_automovil, cpra_cliente)
@@ -448,7 +421,7 @@ BEGIN
 	);
 
 	print '
-	>> Migracion Compras de Autopartes'
+	* Compras de Autopartes'
 
 	insert into LOS_GEDDES.Compras
 	(cpra_numero, cpra_fecha, cpra_precio_total, cpra_sucursal, cpra_cliente)
@@ -471,7 +444,7 @@ BEGIN
 
 	-- Items por compra
 	print '
-	>> Migracion Items por compra'
+	* Items por compra'
 	insert into LOS_GEDDES.Items_por_compra
 	(ipco_id_compra, ipco_id_autoparte, ipco_cantidad, ipco_precio)
 	(
@@ -495,21 +468,22 @@ GO
 CREATE PROCEDURE LOS_GEDDES.MigracionFacturas AS
 BEGIN
 	print '
-	>> Migracion facturas'
+	* Tabla temporal'
 
 	CREATE TABLE #facturas(
-		[nro] [decimal](18, 0),
-		[fecha] [datetime2](3),
-		[cant_facturada] [decimal](18, 0),
-		[cliente_dni] [decimal](18, 0),
-		[cliente_nombre] [nvarchar](255),
-		[cliente_apellido] [nvarchar](255),
-		[sucursal_direccion] [nvarchar](255),
-		[sucursal_mail] [nvarchar](255),
-		[sucursal_telefono] [decimal](18, 0),
-		[auto_nro_chasis] [nvarchar](50),
-		[auto_parte_codigo] [decimal](18, 0),
-		[precio_facturado] [decimal](18, 2))
+		nro decimal(18, 0),
+		fecha datetime2(3),
+		cant_facturada decimal(18, 0),
+		cliente_dni decimal(18, 0),
+		cliente_nombre [nvarchar](255),
+		cliente_apellido [nvarchar](255),
+		sucursal_direccion nvarchar(255),
+		sucursal_mail nvarchar(255),
+		sucursal_telefono decimal(18, 0),
+		auto_nro_chasis nvarchar(50),
+		auto_parte_codigo decimal(18, 0),
+		precio_facturado decimal(18, 2)
+	)
 
 	INSERT INTO #facturas
 	SELECT DISTINCT FACTURA_NRO, FACTURA_FECHA, CANT_FACTURADA, FAC_CLIENTE_DNI, FAC_CLIENTE_NOMBRE, 
@@ -517,6 +491,9 @@ BEGIN
 		AUTO_NRO_CHASIS, AUTO_PARTE_CODIGO, PRECIO_FACTURADO
 		FROM gd_esquema.Maestra
 		WHERE FACTURA_NRO IS NOT NULL
+
+	print '
+	* Facturas'
 
 	INSERT INTO LOS_GEDDES.Facturas
 		
@@ -551,7 +528,7 @@ BEGIN
 			WHERE f.cant_facturada IS NULL -- Facturas de autos
 
 	print '
-	>> migracion items_por_factura'
+	* items_por_factura'
 
 	INSERT INTO LOS_GEDDES.Items_por_factura
 		SELECT f.nro, a.apte_id, SUM(f.cant_facturada), f.precio_facturado
@@ -567,27 +544,52 @@ IF OBJECT_ID ('LOS_GEDDES.MigracionTablas', 'P') IS NOT NULL
    DROP PROCEDURE LOS_GEDDES.MigracionTablas; 
 GO
 
-CREATE PROCEDURE LOS_GEDDES.migracionTablas AS
+CREATE PROCEDURE LOS_GEDDES.MigracionTablasConcesionaria AS
 BEGIN
 	print '*************************** Inicio migracion de datos ****************************'
 	DECLARE @Id_Transmision bigint = 1 
 	DECLARE @Id_Caja bigint = 2 
 	DECLARE @Id_Motor bigint = 3 
 
+	DECLARE @SALTO_DE_LINEA char(1) = char(10)
+
+	print '>> Migracion Ciudades:'
 	EXEC LOS_GEDDES.MigracionCiudades
+	
+	print @SALTO_DE_LINEA +'>> Migracion Sucursales'
 	EXEC LOS_GEDDES.MigracionSucursales
+
+	print @SALTO_DE_LINEA +'>> Migracion Tipos Automoviles'
 	EXEC LOS_GEDDES.MigracionTipoAutomoviles
+	
+	print @SALTO_DE_LINEA +'>> Migracion Componentes'
 	EXEC LOS_GEDDES.MigracionComponentes @Id_Transmision, @Id_Caja, @Id_Motor
+	
+	print @SALTO_DE_LINEA +'>> Migracion Tipos de Componentes'
 	EXEC LOS_GEDDES.MigracionTipoComponentes @Id_Transmision, @Id_Caja, @Id_Motor
+	
+	print @SALTO_DE_LINEA +'>> Migracion Fabricantes'
 	EXEC LOS_GEDDES.MigracionFabricantes
+	
+	print @SALTO_DE_LINEA +'>> Migracion Modelos Automoviles'
 	EXEC LOS_GEDDES.MigracionModelosAutomoviles @Id_Transmision, @Id_Caja, @Id_Motor
+	
+	print @SALTO_DE_LINEA +'>> Migracion Autopartes'
 	EXEC LOS_GEDDES.MigracionAutopartes
+
+	print @SALTO_DE_LINEA +'>> Migracion Clientes'
 	EXEC LOS_GEDDES.MigracionClientes
+
+	print @SALTO_DE_LINEA +'>> Migracion Automoviles'
 	EXEC LOS_GEDDES.MigracionAutomoviles
+
+	print @SALTO_DE_LINEA +'>> Migracion Compras'
 	EXEC LOS_GEDDES.MigracionCompras
+
+	print @SALTO_DE_LINEA +'>> Migracion Facturas'
 	EXEC LOS_GEDDES.MigracionFacturas
 END
 GO
 
-EXEC LOS_GEDDES.MigracionTablas
+EXEC LOS_GEDDES.MigracionTablasConcesionaria
 GO
