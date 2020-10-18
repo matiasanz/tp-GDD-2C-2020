@@ -524,6 +524,7 @@ BEGIN
 	INSERT INTO LOS_GEDDES.Items_por_factura
 		SELECT f.nro, AUTO_PARTE_CODIGO, SUM(f.cant_facturada), f.precio_facturado
 			FROM #facturas f
+			where AUTO_PARTE_CODIGO is not null
 			GROUP BY f.nro, AUTO_PARTE_CODIGO, f.precio_facturado
 
 	DROP TABLE #facturas
