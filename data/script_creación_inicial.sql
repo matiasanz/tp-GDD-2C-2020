@@ -312,8 +312,9 @@ SELECT DISTINCT
 FROM gd_esquema.Maestra m
 JOIN LOS_GEDDES.Fabricantes f on f.fabr_nombre = m.FABRICANTE_NOMBRE
 JOIN LOS_GEDDES.Tipos_automoviles ta on ta.taut_codigo = m.TIPO_AUTO_CODIGO
-JOIN LOS_GEDDES.Tipo_componentes tct on tct.tcom_codigo = m.TIPO_TRANSMISION_CODIGO and tct.tcom_descripcion = m.TIPO_TRANSMISION_DESC and tct.tcom_componente = @Id_Transmision
-JOIN LOS_GEDDES.Tipo_componentes tcc on tcc.tcom_codigo = m.TIPO_CAJA_CODIGO and tcc.tcom_descripcion = m.TIPO_CAJA_DESC and tcc.tcom_componente = @Id_Caja
+JOIN LOS_GEDDES.Tipo_componentes tct on tct.tcom_codigo = m.TIPO_TRANSMISION_CODIGO and tct.tcom_componente = @Id_Transmision
+JOIN LOS_GEDDES.Tipo_componentes tcc on tcc.tcom_codigo = m.TIPO_CAJA_CODIGO 
+and tcc.tcom_componente = @Id_Caja
 JOIN LOS_GEDDES.Tipo_componentes tcm on tcm.tcom_codigo = m.TIPO_MOTOR_CODIGO and tcm.tcom_componente = @Id_Motor
 WHERE m.MODELO_CODIGO IS NOT NULL and m.TIPO_TRANSMISION_CODIGO is not null 
     and m.TIPO_CAJA_CODIGO is not null and m.TIPO_MOTOR_CODIGO is not null;
@@ -348,10 +349,9 @@ print '
 insert into LOS_GEDDES.Automoviles
 (auto_nro_chasis, auto_nro_motor, auto_patente, auto_fecha_alta, auto_cant_kms, auto_modelo)
 (
-	SELECT DISTINCT AUTO_NRO_CHASIS, AUTO_NRO_MOTOR, AUTO_PATENTE, AUTO_FECHA_ALTA, max(AUTO_CANT_KMS), MODELO_CODIGO
+	SELECT DISTINCT AUTO_NRO_CHASIS, AUTO_NRO_MOTOR, AUTO_PATENTE, AUTO_FECHA_ALTA, AUTO_CANT_KMS, MODELO_CODIGO
 		from gd_esquema.Maestra
 		where AUTO_NRO_CHASIS is not null
-		group by AUTO_NRO_CHASIS, AUTO_PATENTE, AUTO_NRO_MOTOR, MODELO_CODIGO, AUTO_FECHA_ALTA
 );
 GO
 
@@ -368,19 +368,15 @@ insert into LOS_GEDDES.Compras
 			ciud_nombre = SUCURSAL_CIUDAD
 		join LOS_GEDDES.Sucursales s on 
 			s.sucu_direccion = SUCURSAL_DIRECCION
-			and s.sucu_ciudad = ciud_id
 		join LOS_GEDDES.Clientes on 
 			clie_dni = CLIENTE_DNI
 			and clie_nombre   = CLIENTE_NOMBRE 
 			and clie_apellido = CLIENTE_APELLIDO
 		--
 		join LOS_GEDDES.Automoviles a on
-			a.auto_patente = maestra.AUTO_PATENTE
-			and a.auto_nro_chasis = maestra.AUTO_NRO_CHASIS
-			and a.auto_nro_motor = maestra.AUTO_NRO_MOTOR
+			 a.auto_nro_chasis = maestra.AUTO_NRO_CHASIS
 		
-		where maestra.COMPRA_NRO is not null		
-		group by COMPRA_NRO, COMPRA_FECHA, COMPRA_PRECIO, SUCU_ID, auto_id, clie_id
+		where maestra.COMPRA_NRO is not null and maestra.AUTO_NRO_MOTOR is not null		
 );
 GO
 
@@ -396,7 +392,6 @@ insert into LOS_GEDDES.Compras
 			ciud_nombre = SUCURSAL_CIUDAD
 		join LOS_GEDDES.Sucursales s on 
 			s.sucu_direccion = SUCURSAL_DIRECCION
-			and s.sucu_ciudad = ciud_id
 		join LOS_GEDDES.Clientes on 
 			clie_dni = CLIENTE_DNI
 			and clie_nombre   = CLIENTE_NOMBRE 
@@ -421,7 +416,6 @@ insert into LOS_GEDDES.Items_por_compra
 			f.fabr_nombre = maestra.FABRICANTE_NOMBRE		
 		join LOS_GEDDES.Autopartes ap on
 			ap.apte_codigo = maestra.AUTO_PARTE_CODIGO
-			and ap.apte_fabricante = fabr_id
 		where COMPRA_NRO is not null and AUTO_PARTE_CODIGO is not null
 		group by cpra_numero, apte_id, fabr_id, COMPRA_PRECIO
 );
@@ -473,7 +467,7 @@ INSERT INTO LOS_GEDDES.Facturas
 		a.auto_id, c.clie_direccion, c.clie_mail
 		FROM #facturas f
 		INNER JOIN LOS_GEDDES.Automoviles a 
-			ON a.auto_nro_chasis = f.auto_nro_chasis -- revisar cuando este la tabla automoviles completa
+			ON a.auto_nro_chasis = f.auto_nro_chasis
 		LEFT JOIN LOS_GEDDES.Clientes c 
 			ON c.clie_dni = f.cliente_dni
 				AND c.clie_apellido = f.cliente_apellido  
