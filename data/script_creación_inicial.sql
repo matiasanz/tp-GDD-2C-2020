@@ -195,29 +195,28 @@ CREATE TABLE LOS_GEDDES.Items_por_compra (
 );
 
 CREATE TABLE LOS_GEDDES.Facturas(
-  fact_id				 bigint IDENTITY(1,1) NOT NULL,
   fact_numero			 decimal(18,0) NOT NULL,
   fact_fecha			 datetime2(3) NOT NULL,
-  fact_cliente   		 bigint NOT NULL,
+  fact_cliente   		 bigint NULL,
   fact_sucursal 		 bigint NOT NULL,
-  fact_automovil		 bigint, -- NOT NULL,
-  fact_direccion_cliente nvarchar(255) NOT NULL,
-  fact_mail_cliente		 nvarchar(255) NOT NULL
+  fact_automovil		 bigint NULL,
+  fact_direccion_cliente nvarchar(255) NULL,
+  fact_mail_cliente		 nvarchar(255) NULL
 
-  CONSTRAINT PK_Facturas PRIMARY KEY(fact_id),
+  CONSTRAINT PK_Facturas PRIMARY KEY(fact_numero),
   CONSTRAINT FK_Facturas_cliente FOREIGN KEY(fact_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id),
   CONSTRAINT FK_Facturas_sucursal FOREIGN KEY(fact_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
   CONSTRAINT FK_Facturas_automovil FOREIGN KEY(fact_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id)
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_factura(
-  ipfa_id_factura	   bigint NOT NULL,
-  ipfa_id_autoparte	   bigint NOT NULL,
-  ipfa_cantidad		   decimal(18,0) NOT NULL,
+  ipfa_factura_numero   decimal(18,0) NOT NULL,
+  ipfa_id_autoparte	    bigint NOT NULL,
+  ipfa_cantidad		    decimal(18,0) NOT NULL,
   ipfa_precio_facturado decimal(18,2) NOT NULL
 
-  CONSTRAINT PK_Items_por_factura PRIMARY KEY (ipfa_id_factura, ipfa_id_autoparte),
-  CONSTRAINT FK_Items_por_factura_id_factura FOREIGN KEY(ipfa_id_factura  ) REFERENCES LOS_GEDDES.Facturas(fact_id),
+  CONSTRAINT PK_Items_por_factura PRIMARY KEY (ipfa_factura_numero, ipfa_id_autoparte),
+  CONSTRAINT FK_Items_por_factura_factura_numero FOREIGN KEY(ipfa_factura_numero) REFERENCES LOS_GEDDES.Facturas(fact_numero),
   CONSTRAINT FK_Items_por_factura_id_autoparte FOREIGN KEY(ipfa_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_id)
 );
 GO
@@ -329,6 +328,7 @@ INSERT INTO LOS_GEDDES.Autopartes
 			fabr.fabr_nombre = maestra.FABRICANTE_NOMBRE
 		where AUTO_PARTE_CODIGO is not null
 );
+GO
 
 -- Clientes
 print '>> Migracion clientes'
@@ -350,6 +350,7 @@ insert into LOS_GEDDES.Automoviles
 		where AUTO_NRO_CHASIS is not null
 		group by AUTO_NRO_CHASIS, AUTO_PATENTE, AUTO_NRO_MOTOR, MODELO_CODIGO, AUTO_FECHA_ALTA
 );
+GO
 
 --Compra Automoviles
 print '
@@ -378,6 +379,7 @@ insert into LOS_GEDDES.Compras
 		where maestra.COMPRA_NRO is not null		
 		group by COMPRA_NRO, COMPRA_FECHA, COMPRA_PRECIO, SUCU_ID, auto_id, clie_id
 );
+GO
 
 print '
 >> Migracion Compras de Autopartes'
@@ -401,7 +403,7 @@ insert into LOS_GEDDES.Compras
 			
 		group by COMPRA_NRO, COMPRA_FECHA, SUCU_ID, clie_id
 );
-
+GO
 
 -- Items por compra
 print '
@@ -420,13 +422,14 @@ insert into LOS_GEDDES.Items_por_compra
 		where COMPRA_NRO is not null and AUTO_PARTE_CODIGO is not null
 		group by cpra_numero, apte_id, fabr_id, COMPRA_PRECIO
 );
+GO
 
  --Facturas
 print '
 >> Migracion facturas'
 
-IF OBJECT_ID('tempdb..#facturas') IS NOT NULL
-	DROP TABLE #facturas
+--IF OBJECT_ID('tempdb..#facturas') IS NOT NULL
+	
 
 CREATE TABLE #facturas(
 	[nro] [decimal](18, 0),
@@ -438,12 +441,14 @@ CREATE TABLE #facturas(
 	[sucursal_direccion] [nvarchar](255),
 	[sucursal_mail] [nvarchar](255),
 	[sucursal_telefono] [decimal](18, 0),
-	[auto_nro_chasis] [nvarchar](50))
+	[auto_nro_chasis] [nvarchar](50),
+	[auto_parte_codigo] [decimal](18, 0),
+	[precio_facturado] [decimal](18, 2))
 
 INSERT INTO #facturas
 SELECT DISTINCT FACTURA_NRO, FACTURA_FECHA, CANT_FACTURADA, CLIENTE_DNI, CLIENTE_NOMBRE, 
 	CLIENTE_APELLIDO, FAC_SUCURSAL_DIRECCION, FAC_SUCURSAL_MAIL, FAC_SUCURSAL_TELEFONO,
-	AUTO_NRO_CHASIS
+	AUTO_NRO_CHASIS, AUTO_PARTE_CODIGO, PRECIO_FACTURADO
 	FROM gd_esquema.Maestra
 	WHERE FACTURA_NRO IS NOT NULL
 
@@ -452,7 +457,7 @@ INSERT INTO LOS_GEDDES.Facturas
 		SELECT DISTINCT f.nro, f.fecha, c.clie_id, s.sucu_id, 
 		NULL, c.clie_direccion, c.clie_mail
 		FROM #facturas f
-		INNER JOIN LOS_GEDDES.Clientes c 
+		LEFT JOIN LOS_GEDDES.Clientes c 
 			ON c.clie_dni = f.cliente_dni
 				AND c.clie_apellido = f.cliente_apellido  
 				AND c.clie_nombre = f.cliente_nombre 
@@ -463,14 +468,14 @@ INSERT INTO LOS_GEDDES.Facturas
 			   --LEFT JOIN LOS_GEDDES.Ciudades d on d.ciud_id = s.sucu_id AND d.ciud_nombre = m.FAC_SUCURSAL_CIUDAD
 		WHERE f.cant_facturada IS NOT NULL -- Facturas de autopartes
 
-		UNION
+		UNION ALL
 
 		SELECT DISTINCT f.nro, f.fecha, c.clie_id, s.sucu_id, 
 		a.auto_id, c.clie_direccion, c.clie_mail
 		FROM #facturas f
 		INNER JOIN LOS_GEDDES.Automoviles a 
 			ON a.auto_nro_chasis = f.auto_nro_chasis -- revisar cuando este la tabla automoviles completa
-		INNER JOIN LOS_GEDDES.Clientes c 
+		LEFT JOIN LOS_GEDDES.Clientes c 
 			ON c.clie_dni = f.cliente_dni
 				AND c.clie_apellido = f.cliente_apellido  
 				AND c.clie_nombre = f.cliente_nombre 
@@ -485,27 +490,10 @@ print '
 >> migracion items_por_factura'
 
 INSERT INTO LOS_GEDDES.Items_por_factura
-(ipfa_id_factura, ipfa_id_autoparte, ipfa_cantidad, ipfa_precio_facturado)
-(
-	SELECT DISTINCT fact_id, apte_id, CANT_FACTURADA, PRECIO_FACTURADO
-		from gd_esquema.Maestra
-		join LOS_GEDDES.Fabricantes on
-			fabr_nombre = FABRICANTE_NOMBRE
-		join LOS_GEDDES.Autopartes on
-			apte_codigo = AUTO_PARTE_CODIGO
-			and apte_fabricante = fabr_id
-			--
-		join LOS_GEDDES.Ciudades on
-			ciud_nombre = FAC_SUCURSAL_CIUDAD
-		join LOS_GEDDES.Sucursales on
-			sucu_ciudad = ciud_id
-		join LOS_GEDDES.Facturas on
-			fact_numero = FACTURA_NRO
-			and fact_sucursal = sucu_id	
-		where 
-			FACTURA_NRO is not null 
-			and AUTO_PARTE_CODIGO is not null
-);
+	SELECT f.nro, a.apte_id, SUM(f.cant_facturada), f.precio_facturado
+		FROM #facturas f
+		INNER JOIN LOS_GEDDES.Autopartes a on f.auto_parte_codigo = a.apte_codigo
+		GROUP BY f.nro, a.apte_id, f.precio_facturado
 
-
+DROP TABLE #facturas
 GO
