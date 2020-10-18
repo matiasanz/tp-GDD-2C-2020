@@ -257,12 +257,14 @@ GO
 --Componentes
 print '
 >> Migracion Componentes'
+DECLARE @Id_Transmision bigint = 1 
+DECLARE @Id_Caja bigint = 2 
+DECLARE @Id_Motor bigint = 3 
 
 INSERT INTO LOS_GEDDES.Componentes(comp_id,comp_descripcion)
-VALUES (1,'TRANSMISION'),
-       (2,'CAJA'),
-       (3,'MOTOR');
-GO
+VALUES (@Id_Transmision,'TRANSMISION'),
+       (@Id_Caja,'CAJA'),
+       (@Id_Motor,'MOTOR');
 
 --Tipo Componentes
 print '
@@ -270,23 +272,22 @@ print '
 
 INSERT INTO LOS_GEDDES.Tipo_componentes(tcom_componente,tcom_codigo,tcom_descripcion)
 (
-    SELECT DISTINCT 1,TIPO_TRANSMISION_CODIGO,TIPO_TRANSMISION_DESC
+    SELECT DISTINCT @Id_Transmision,TIPO_TRANSMISION_CODIGO,TIPO_TRANSMISION_DESC
     FROM gd_esquema.Maestra
     WHERE TIPO_TRANSMISION_CODIGO IS NOT NULL
 
     UNION ALL
 
-    SELECT DISTINCT 2,TIPO_CAJA_CODIGO,TIPO_CAJA_DESC
+    SELECT DISTINCT @Id_Caja,TIPO_CAJA_CODIGO,TIPO_CAJA_DESC
     FROM gd_esquema.Maestra
     WHERE TIPO_CAJA_CODIGO IS NOT NULL
 
     UNION ALL
 
-    SELECT DISTINCT 3,TIPO_MOTOR_CODIGO,null
+    SELECT DISTINCT @Id_Motor,TIPO_MOTOR_CODIGO,null
     FROM gd_esquema.Maestra
     WHERE TIPO_MOTOR_CODIGO IS NOT NULL
 )
-GO
 
 --Fabricantes
 print '
@@ -296,7 +297,6 @@ INSERT INTO LOS_GEDDES.Fabricantes(fabr_nombre)
 SELECT DISTINCT FABRICANTE_NOMBRE
 FROM gd_esquema.Maestra
 WHERE FABRICANTE_NOMBRE IS NOT NULL;
-GO
 
 --Modelos Automoviles
 print '
@@ -309,9 +309,9 @@ SELECT DISTINCT
 FROM gd_esquema.Maestra m
 JOIN LOS_GEDDES.Fabricantes f on f.fabr_nombre = m.FABRICANTE_NOMBRE
 JOIN LOS_GEDDES.Tipos_automoviles ta on ta.taut_codigo = m.TIPO_AUTO_CODIGO
-JOIN LOS_GEDDES.Tipo_componentes tct on tct.tcom_codigo = m.TIPO_TRANSMISION_CODIGO and tct.tcom_descripcion = m.TIPO_TRANSMISION_DESC and tct.tcom_componente = 1
-JOIN LOS_GEDDES.Tipo_componentes tcc on tcc.tcom_codigo = m.TIPO_CAJA_CODIGO and tcc.tcom_descripcion = m.TIPO_CAJA_DESC and tcc.tcom_componente = 2
-JOIN LOS_GEDDES.Tipo_componentes tcm on tcm.tcom_codigo = m.TIPO_MOTOR_CODIGO and tcm.tcom_componente = 3
+JOIN LOS_GEDDES.Tipo_componentes tct on tct.tcom_codigo = m.TIPO_TRANSMISION_CODIGO and tct.tcom_descripcion = m.TIPO_TRANSMISION_DESC and tct.tcom_componente = @Id_Transmision
+JOIN LOS_GEDDES.Tipo_componentes tcc on tcc.tcom_codigo = m.TIPO_CAJA_CODIGO and tcc.tcom_descripcion = m.TIPO_CAJA_DESC and tcc.tcom_componente = @Id_Caja
+JOIN LOS_GEDDES.Tipo_componentes tcm on tcm.tcom_codigo = m.TIPO_MOTOR_CODIGO and tcm.tcom_componente = @Id_Motor
 WHERE m.MODELO_CODIGO IS NOT NULL and m.TIPO_TRANSMISION_CODIGO is not null 
     and m.TIPO_CAJA_CODIGO is not null and m.TIPO_MOTOR_CODIGO is not null;
 GO
