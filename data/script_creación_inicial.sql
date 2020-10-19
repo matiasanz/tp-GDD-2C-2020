@@ -151,7 +151,7 @@ CREATE TABLE LOS_GEDDES.Clientes(
 CREATE TABLE LOS_GEDDES.Compras(
   cpra_numero        decimal(18,0) NOT NULL,
   cpra_fecha         datetime2(3) NOT NULL,
-  cpra_precio_total  decimal(18,2), --NOT NULL, <--En la compra de autopartes se carga despues
+  cpra_precio_total  decimal(18,2) NOT NULL,
   cpra_sucursal      bigint NOT NULL,
   cpra_automovil     bigint,
   cpra_cliente       bigint NOT NULL
