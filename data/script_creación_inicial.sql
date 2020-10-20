@@ -366,10 +366,19 @@ GO
 CREATE PROCEDURE LOS_GEDDES.MigracionClientes AS
 BEGIN
 	INSERT INTO LOS_GEDDES.Clientes       
-			SELECT DISTINCT CLIENTE_DNI, CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_DIRECCION, CLIENTE_FECHA_NAC, 
+	(
+    SELECT DISTINCT CLIENTE_DNI, CLIENTE_NOMBRE, CLIENTE_APELLIDO, CLIENTE_DIRECCION, CLIENTE_FECHA_NAC, 
 							CLIENTE_MAIL, NULL
-			FROM gd_esquema.Maestra 
-			WHERE CLIENTE_DNI IS NOT NULL
+    FROM gd_esquema.Maestra 
+    WHERE CLIENTE_DNI IS NOT NULL
+    
+    UNION
+
+    SELECT DISTINCT FAC_CLIENTE_DNI, FAC_CLIENTE_NOMBRE, FAC_CLIENTE_APELLIDO, FAC_CLIENTE_DIRECCION, FAC_CLIENTE_FECHA_NAC, 
+							FAC_CLIENTE_MAIL, NULL
+    FROM gd_esquema.Maestra 
+    WHERE FAC_CLIENTE_DNI IS NOT NULL
+  )
 END
 GO
 
@@ -491,7 +500,7 @@ BEGIN
 			SELECT DISTINCT f.nro, f.fecha, c.clie_id, s.sucu_id, 
 			NULL, c.clie_direccion, c.clie_mail
 			FROM #facturas f
-			LEFT JOIN LOS_GEDDES.Clientes c 
+			INNER JOIN LOS_GEDDES.Clientes c 
 				ON c.clie_dni = f.cliente_dni
 					AND c.clie_apellido = f.cliente_apellido  
 					AND c.clie_nombre = f.cliente_nombre 
@@ -508,7 +517,7 @@ BEGIN
 			FROM #facturas f
 			INNER JOIN LOS_GEDDES.Automoviles a 
 				ON a.auto_nro_chasis = f.auto_nro_chasis
-			LEFT JOIN LOS_GEDDES.Clientes c 
+			INNER JOIN LOS_GEDDES.Clientes c 
 				ON c.clie_dni = f.cliente_dni
 					AND c.clie_apellido = f.cliente_apellido  
 					AND c.clie_nombre = f.cliente_nombre 
