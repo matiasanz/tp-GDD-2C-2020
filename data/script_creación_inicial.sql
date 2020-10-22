@@ -6,53 +6,6 @@ IF NOT EXISTS(SELECT * FROM sys.schemas WHERE name = 'LOS_GEDDES')
 	EXEC('CREATE SCHEMA[LOS_GEDDES] AUTHORIZATION [dbo]')
 GO
 
--- Drop tables
-IF OBJECT_ID('LOS_GEDDES.Items_por_factura') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Items_por_factura
-
-IF OBJECT_ID('LOS_GEDDES.Facturas') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Facturas
-
-IF OBJECT_ID('LOS_GEDDES.Items_por_Compra') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Items_por_Compra
-
-IF OBJECT_ID('LOS_GEDDES.Autopartes') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Autopartes
-
-IF OBJECT_ID('LOS_GEDDES.Categorias_autopartes') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Categorias_autopartes
-
-IF OBJECT_ID('LOS_GEDDES.Compras') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Compras
-
-IF OBJECT_ID('LOS_GEDDES.Clientes') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Clientes
-
-IF OBJECT_ID('LOS_GEDDES.Automoviles') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Automoviles
-
-IF OBJECT_ID('LOS_GEDDES.Modelos_automoviles') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Modelos_automoviles
-
-IF OBJECT_ID('LOS_GEDDES.Fabricantes') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Fabricantes
-
-IF OBJECT_ID('LOS_GEDDES.Tipo_componentes') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Tipo_componentes
-
-IF OBJECT_ID('LOS_GEDDES.Componentes') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Componentes
-
-IF OBJECT_ID('LOS_GEDDES.Tipos_automoviles') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Tipos_automoviles
-
-IF OBJECT_ID('LOS_GEDDES.Sucursales') IS NOT NULL
-	DROP TABLE [LOS_GEDDES].Sucursales
-
-IF OBJECT_ID('LOS_GEDDES.Ciudades') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Ciudades
-GO
-
 --Creacion de Tablas
 CREATE TABLE LOS_GEDDES.Ciudades (
   ciud_id     bigint IDENTITY(1,1) NOT NULL,
@@ -222,9 +175,6 @@ GO
 
 -- Migracion de Datos
 -- Ciudades
-IF OBJECT_ID ('LOS_GEDDES.MigracionCiudades', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionCiudades; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionCiudades AS
 BEGIN
 	INSERT INTO LOS_GEDDES.Ciudades(ciud_nombre)
@@ -235,9 +185,6 @@ END
 GO
 
 --Sucursales
-IF OBJECT_ID ('LOS_GEDDES.MigracionSucursales', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionSucursales; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionSucursales AS
 BEGIN
 	INSERT INTO LOS_GEDDES.Sucursales(sucu_direccion,sucu_mail,sucu_telefono,sucu_ciudad)
@@ -249,9 +196,6 @@ END
 GO
 
 --Tipo Automoviles
-IF OBJECT_ID ('LOS_GEDDES.MigracionTipoAutomoviles', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionTipoAutomoviles; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionTipoAutomoviles AS
 BEGIN
 	INSERT INTO LOS_GEDDES.Tipos_automoviles(taut_codigo,taut_descripcion)
@@ -262,9 +206,6 @@ END
 GO
 
 --Componentes
-IF OBJECT_ID ('LOS_GEDDES.MigracionComponentes', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionComponentes; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionComponentes 
 @Id_Transmision bigint, @Id_Caja bigint, @Id_Motor bigint
 AS
@@ -276,9 +217,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID ('LOS_GEDDES.MigracionTipoComponentes', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionTipoComponentes; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionTipoComponentes 
 @Id_Transmision bigint, @Id_Caja bigint, @Id_Motor bigint
 AS
@@ -305,9 +243,6 @@ END
 GO
 
 --Fabricantes
-IF OBJECT_ID ('LOS_GEDDES.MigracionFabricantes', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionFabricantes; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionFabricantes AS
 BEGIN
 	INSERT INTO LOS_GEDDES.Fabricantes(fabr_nombre)
@@ -318,9 +253,6 @@ END
 GO
 
 --Modelos Automoviles
-IF OBJECT_ID ('LOS_GEDDES.MigracionModelosAutomoviles', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionModelosAutomoviles; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionModelosAutomoviles 
 @Id_Transmision bigint, @Id_Caja bigint, @Id_Motor bigint
 AS
@@ -342,9 +274,6 @@ END
 GO
 
 --Autopartes
-IF OBJECT_ID ('LOS_GEDDES.MigracionAutopartes', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionAutopartes; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionAutopartes AS
 BEGIN
 	INSERT INTO LOS_GEDDES.Autopartes
@@ -360,9 +289,6 @@ END
 GO
 
 -- Clientes
-IF OBJECT_ID ('LOS_GEDDES.MigracionClientes', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionClientes; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionClientes AS
 BEGIN
 	INSERT INTO LOS_GEDDES.Clientes       
@@ -383,9 +309,6 @@ END
 GO
 
 -- Automoviles
-IF OBJECT_ID ('LOS_GEDDES.MigracionAutomoviles', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionAutomoviles; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionAutomoviles AS
 BEGIN
 	insert into LOS_GEDDES.Automoviles
@@ -398,10 +321,6 @@ BEGIN
 END
 GO
 
-
-IF OBJECT_ID ('LOS_GEDDES.MigracionCompras', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionCompras; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionCompras AS
 BEGIN
 	--Compra Automoviles
@@ -462,9 +381,6 @@ END
 GO
 
  --Facturas
-IF OBJECT_ID ('LOS_GEDDES.MigracionFacturas', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionFacturas; 
-GO
 CREATE PROCEDURE LOS_GEDDES.MigracionFacturas AS
 BEGIN
 	print '
@@ -540,10 +456,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID ('LOS_GEDDES.MigracionTablasConcesionaria', 'P') IS NOT NULL  
-   DROP PROCEDURE LOS_GEDDES.MigracionTablasConcesionaria; 
-GO
-
 CREATE PROCEDURE LOS_GEDDES.MigracionTablasConcesionaria AS
 BEGIN
 	print '*************************** Inicio migracion de datos ****************************'
@@ -593,3 +505,17 @@ GO
 
 EXEC LOS_GEDDES.MigracionTablasConcesionaria
 GO
+
+DROP PROCEDURE LOS_GEDDES.MigracionTablasConcesionaria
+DROP PROCEDURE LOS_GEDDES.MigracionAutomoviles
+DROP PROCEDURE LOS_GEDDES.MigracionAutopartes
+DROP PROCEDURE LOS_GEDDES.MigracionCiudades
+DROP PROCEDURE LOS_GEDDES.MigracionClientes
+DROP PROCEDURE LOS_GEDDES.MigracionComponentes
+DROP PROCEDURE LOS_GEDDES.MigracionCompras
+DROP PROCEDURE LOS_GEDDES.MigracionFabricantes
+DROP PROCEDURE LOS_GEDDES.MigracionFacturas
+DROP PROCEDURE LOS_GEDDES.MigracionModelosAutomoviles
+DROP PROCEDURE LOS_GEDDES.MigracionSucursales
+DROP PROCEDURE LOS_GEDDES.MigracionTipoAutomoviles
+DROP PROCEDURE LOS_GEDDES.MigracionTipoComponentes
