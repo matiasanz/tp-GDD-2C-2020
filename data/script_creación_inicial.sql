@@ -57,7 +57,6 @@ GO
 CREATE TABLE LOS_GEDDES.Ciudades (
   ciud_id     bigint IDENTITY(1,1) NOT NULL,
   ciud_nombre nvarchar(255) NOT NULL
-  CONSTRAINT PK_Ciudades PRIMARY KEY(ciud_id)
 );  
 
 CREATE TABLE LOS_GEDDES.Sucursales(
@@ -66,23 +65,16 @@ CREATE TABLE LOS_GEDDES.Sucursales(
   sucu_mail		 nvarchar(255) NOT NULL,
   sucu_telefono  decimal(18,0) NOT NULL,
   sucu_ciudad    bigint NOT NULL
-
-  CONSTRAINT PK_Sucursales PRIMARY KEY(sucu_id),
-  CONSTRAINT FK_Sucursales_ciudad FOREIGN KEY(sucu_ciudad) REFERENCES LOS_GEDDES.Ciudades(ciud_id)
 );
 
 CREATE TABLE LOS_GEDDES.Tipos_automoviles(
   taut_codigo	   decimal(18,0) NOT NULL, 
   taut_descripcion nvarchar(255) NOT NULL
-
-  CONSTRAINT PK_Tipos_automoviles PRIMARY KEY(taut_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Componentes (
-  comp_id		   bigint,
+  comp_id		   bigint NOT NULL,
   comp_descripcion nvarchar(255) NOT NULL
-
-  CONSTRAINT PK_Componentes PRIMARY KEY(comp_id)
 );
 
 CREATE TABLE LOS_GEDDES.Tipo_componentes(
@@ -90,16 +82,11 @@ CREATE TABLE LOS_GEDDES.Tipo_componentes(
   tcom_componente    bigint NOT NULL,
   tcom_codigo		 decimal(18,0) NOT NULL,
   tcom_descripcion	 nvarchar(255)
-
-  CONSTRAINT PK_Tipo_componentes PRIMARY KEY(tcom_id),
-  CONSTRAINT FK_Tipo_componentes_componente FOREIGN KEY(tcom_componente) REFERENCES LOS_GEDDES.Componentes(comp_id)
 );
 
 CREATE TABLE LOS_GEDDES.Fabricantes(
   fabr_id	  bigint IDENTITY(1,1) NOT NULL,
   fabr_nombre nvarchar(255) NOT NULL
-
-  CONSTRAINT PK_Fabricantes PRIMARY KEY(fabr_id)
 );
 
 CREATE TABLE LOS_GEDDES.Modelos_automoviles(
@@ -112,13 +99,6 @@ CREATE TABLE LOS_GEDDES.Modelos_automoviles(
   mode_tipo_motor        bigint NOT NULL,
   mode_tipo_caja_cambios bigint NOT NULL,
   mode_cantidad_cambios  smallint NULL
-
-  CONSTRAINT PK_Modelos_automoviles PRIMARY KEY(mode_codigo),
-  CONSTRAINT FK_Modelos_automoviles_fabricante FOREIGN KEY(mode_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id),
-  CONSTRAINT FK_Modelos_automoviles_tipo_auto FOREIGN KEY(mode_tipo_auto) REFERENCES LOS_GEDDES.Tipos_automoviles(taut_codigo), 
-  CONSTRAINT FK_Modelos_automoviles_tipo_transmision FOREIGN KEY(mode_tipo_transmision) REFERENCES LOS_GEDDES.Tipo_componentes(tcom_id),
-  CONSTRAINT FK_Modelos_automoviles_tipo_motor FOREIGN KEY(mode_tipo_motor) REFERENCES LOS_GEDDES.Tipo_componentes(tcom_id),
-  CONSTRAINT FK_Modelos_automoviles_tipo_caja_cambios FOREIGN KEY(mode_tipo_caja_cambios) REFERENCES LOS_GEDDES.Tipo_componentes(tcom_id)
 );
 
 CREATE TABLE LOS_GEDDES.Automoviles(
@@ -129,9 +109,6 @@ CREATE TABLE LOS_GEDDES.Automoviles(
   auto_fecha_alta datetime2(3) NOT NULL,
   auto_cant_kms   decimal(18,0) NOT NULL,
   auto_modelo     decimal(18,0) NOT NULL
-
-  CONSTRAINT PK_Automoviles PRIMARY KEY(auto_id),
-  CONSTRAINT FK_Automoviles_modelo FOREIGN KEY(auto_modelo) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
 );
 
 CREATE TABLE LOS_GEDDES.Clientes(
@@ -143,9 +120,6 @@ CREATE TABLE LOS_GEDDES.Clientes(
   clie_fecha_nac datetime2(3) NOT NULL,
   clie_mail		 nvarchar(255) NOT NULL,
   clie_sexo		 char(1)
-  
-  CONSTRAINT PK_Clientes PRIMARY KEY(clie_id),
-  CONSTRAINT CK_sexo CHECK(clie_sexo in ('m', 'f'))
 );
 
 CREATE TABLE LOS_GEDDES.Compras(
@@ -155,18 +129,11 @@ CREATE TABLE LOS_GEDDES.Compras(
   cpra_sucursal      bigint NOT NULL,
   cpra_automovil     bigint,
   cpra_cliente       bigint NOT NULL
-
-  CONSTRAINT PK_Compras PRIMARY KEY(cpra_numero)
-  CONSTRAINT FK_Compras_sucursal FOREIGN KEY(cpra_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
-  CONSTRAINT FK_Compras_automovil FOREIGN KEY(cpra_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id),
-  CONSTRAINT FK_Compras_cliente FOREIGN KEY(cpra_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id)
 );
 
 CREATE TABLE LOS_GEDDES.Categorias_autopartes(
   cate_codigo	   bigint NOT NULL,
   cate_descripcion nvarchar(255) NOT NULL
-  
-  CONSTRAINT PK_Categorias_autopartes PRIMARY KEY(cate_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Autopartes(
@@ -175,11 +142,6 @@ CREATE TABLE LOS_GEDDES.Autopartes(
   apte_modelo_auto    decimal(18,0) NOT NULL,
   apte_fabricante	  bigint NOT NULL,
   apte_categoria      bigint
-
-  CONSTRAINT PK_Autopartes PRIMARY KEY(apte_codigo),
-  CONSTRAINT FK_Autopartes FOREIGN KEY(apte_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id),
-  CONSTRAINT FK_Autopartes_modelo_auto FOREIGN KEY(apte_modelo_auto) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
-  CONSTRAINT FK_Autoparte_categoria FOREIGN KEY(apte_categoria) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_compra (
@@ -187,10 +149,6 @@ CREATE TABLE LOS_GEDDES.Items_por_compra (
   ipco_id_autoparte decimal(18,0) NOT NULL,
   ipco_cantidad	    decimal(18,0) NOT NULL,
   ipco_precio	    decimal(18,2) NOT NULL
-
-  CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte),
-  CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_numero),
-  CONSTRAINT FK_Items_por_compra_id_autoparte FOREIGN KEY(ipco_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
 );
 
 CREATE TABLE LOS_GEDDES.Facturas(
@@ -201,11 +159,6 @@ CREATE TABLE LOS_GEDDES.Facturas(
   fact_automovil		 bigint NULL,
   fact_direccion_cliente nvarchar(255) NULL,
   fact_mail_cliente		 nvarchar(255) NULL
-
-  CONSTRAINT PK_Facturas PRIMARY KEY(fact_numero),
-  CONSTRAINT FK_Facturas_cliente FOREIGN KEY(fact_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id),
-  CONSTRAINT FK_Facturas_sucursal FOREIGN KEY(fact_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
-  CONSTRAINT FK_Facturas_automovil FOREIGN KEY(fact_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id)
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_factura(
@@ -213,10 +166,6 @@ CREATE TABLE LOS_GEDDES.Items_por_factura(
   ipfa_id_autoparte	    decimal(18,0) NOT NULL,
   ipfa_cantidad		    decimal(18,0) NOT NULL,
   ipfa_precio_facturado decimal(18,2) NOT NULL
-
-  CONSTRAINT PK_Items_por_factura PRIMARY KEY (ipfa_factura_numero, ipfa_id_autoparte),
-  CONSTRAINT FK_Items_por_factura_factura_numero FOREIGN KEY(ipfa_factura_numero) REFERENCES LOS_GEDDES.Facturas(fact_numero),
-  CONSTRAINT FK_Items_por_factura_id_autoparte FOREIGN KEY(ipfa_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
 );
 GO
 
@@ -551,6 +500,90 @@ END
 GO
 
 EXEC LOS_GEDDES.MigracionTablasConcesionaria
+GO
+
+--Constraints
+ALTER TABLE LOS_GEDDES.Ciudades ADD 
+	CONSTRAINT PK_Ciudades PRIMARY KEY(ciud_id)
+;
+
+ALTER TABLE LOS_GEDDES.Sucursales ADD
+	CONSTRAINT PK_Sucursales PRIMARY KEY(sucu_id),
+	CONSTRAINT FK_Sucursales_ciudad FOREIGN KEY(sucu_ciudad) REFERENCES LOS_GEDDES.Ciudades(ciud_id)
+;
+		
+ALTER TABLE LOS_GEDDES.Tipos_automoviles ADD
+  CONSTRAINT PK_Tipos_automoviles PRIMARY KEY(taut_codigo)
+;
+
+ALTER TABLE LOS_GEDDES.Componentes ADD
+  CONSTRAINT PK_Componentes PRIMARY KEY(comp_id)
+;
+
+ALTER TABLE LOS_GEDDES.Tipo_componentes ADD
+  CONSTRAINT PK_Tipo_componentes PRIMARY KEY(tcom_id),
+  CONSTRAINT FK_Tipo_componentes_componente FOREIGN KEY(tcom_componente) REFERENCES LOS_GEDDES.Componentes(comp_id)
+;
+
+ALTER TABLE LOS_GEDDES.Fabricantes ADD
+  CONSTRAINT PK_Fabricantes PRIMARY KEY(fabr_id)
+;
+
+ALTER TABLE LOS_GEDDES.Modelos_automoviles ADD
+  CONSTRAINT PK_Modelos_automoviles PRIMARY KEY(mode_codigo),
+  CONSTRAINT FK_Modelos_automoviles_fabricante FOREIGN KEY(mode_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id),
+  CONSTRAINT FK_Modelos_automoviles_tipo_auto FOREIGN KEY(mode_tipo_auto) REFERENCES LOS_GEDDES.Tipos_automoviles(taut_codigo), 
+  CONSTRAINT FK_Modelos_automoviles_tipo_transmision FOREIGN KEY(mode_tipo_transmision) REFERENCES LOS_GEDDES.Tipo_componentes(tcom_id),
+  CONSTRAINT FK_Modelos_automoviles_tipo_motor FOREIGN KEY(mode_tipo_motor) REFERENCES LOS_GEDDES.Tipo_componentes(tcom_id),
+  CONSTRAINT FK_Modelos_automoviles_tipo_caja_cambios FOREIGN KEY(mode_tipo_caja_cambios) REFERENCES LOS_GEDDES.Tipo_componentes(tcom_id)
+;
+
+ALTER TABLE LOS_GEDDES.Automoviles ADD
+  CONSTRAINT PK_Automoviles PRIMARY KEY(auto_id),
+  CONSTRAINT FK_Automoviles_modelo FOREIGN KEY(auto_modelo) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo)
+;
+
+ALTER TABLE LOS_GEDDES.Clientes ADD
+  CONSTRAINT PK_Clientes PRIMARY KEY(clie_id),
+  CONSTRAINT CK_sexo CHECK(clie_sexo in ('m', 'f'))
+;
+
+ALTER TABLE LOS_GEDDES.Compras ADD
+  CONSTRAINT PK_Compras PRIMARY KEY(cpra_numero),
+  CONSTRAINT FK_Compras_sucursal FOREIGN KEY(cpra_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
+  CONSTRAINT FK_Compras_automovil FOREIGN KEY(cpra_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id),
+  CONSTRAINT FK_Compras_cliente FOREIGN KEY(cpra_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id)
+;
+
+ALTER TABLE LOS_GEDDES.Categorias_autopartes ADD
+  CONSTRAINT PK_Categorias_autopartes PRIMARY KEY(cate_codigo)
+;
+
+ALTER TABLE LOS_GEDDES.Autopartes ADD
+  CONSTRAINT PK_Autopartes PRIMARY KEY(apte_codigo),
+  CONSTRAINT FK_Autopartes FOREIGN KEY(apte_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id),
+  CONSTRAINT FK_Autopartes_modelo_auto FOREIGN KEY(apte_modelo_auto) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
+  CONSTRAINT FK_Autoparte_categoria FOREIGN KEY(apte_categoria) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo)
+;
+
+ALTER TABLE LOS_GEDDES.Items_por_compra ADD
+  CONSTRAINT PK_Items_por_compra PRIMARY KEY(ipco_id_compra, ipco_id_autoparte),
+  CONSTRAINT FK_Items_por_compra_id_compra FOREIGN KEY(ipco_id_compra) REFERENCES LOS_GEDDES.Compras(cpra_numero),
+  CONSTRAINT FK_Items_por_compra_id_autoparte FOREIGN KEY(ipco_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
+;
+
+ALTER TABLE LOS_GEDDES.Facturas ADD
+  CONSTRAINT PK_Facturas PRIMARY KEY(fact_numero),
+  CONSTRAINT FK_Facturas_cliente FOREIGN KEY(fact_cliente) REFERENCES LOS_GEDDES.Clientes(clie_id),
+  CONSTRAINT FK_Facturas_sucursal FOREIGN KEY(fact_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
+  CONSTRAINT FK_Facturas_automovil FOREIGN KEY(fact_automovil) REFERENCES LOS_GEDDES.Automoviles(auto_id)
+;
+
+ALTER TABLE LOS_GEDDES.Items_por_factura ADD
+  CONSTRAINT PK_Items_por_factura PRIMARY KEY (ipfa_factura_numero, ipfa_id_autoparte),
+  CONSTRAINT FK_Items_por_factura_factura_numero FOREIGN KEY(ipfa_factura_numero) REFERENCES LOS_GEDDES.Facturas(fact_numero),
+  CONSTRAINT FK_Items_por_factura_id_autoparte FOREIGN KEY(ipfa_id_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo)
+;
 GO
 
 DROP PROCEDURE LOS_GEDDES.MigracionTablasConcesionaria
