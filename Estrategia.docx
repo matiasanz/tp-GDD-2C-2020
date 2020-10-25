@@ -1,0 +1,21 @@
+Estrategias
+
+Modelo De Datos
+- Corregimos la relación de compra - cliente. 
+- Para asegurar la integridad de datos utilizamos NOT NULL en todas las columnas que consideramos como campos obligatorios.
+- Decidimos crear la tabla 'tipo_componentes' para poder representar en una sola tabla los tipos de componentes 
+    asociados a los automoviles y no tener que crear una tabla para cada componente.
+- Declaración de campos de tipo big int para la útilización de los identificadores dadas en la tabla maestra.
+- Creación de las tablas item_por_factura e item_por_compra para poder Normalizar los campos asociados a la facturación.
+- La tabla factura tiene datos de cliente para mantener un historial frente a eventuales cambios.
+
+Perfomance y Rendimiento
+- Dropeamos los procedures al final para evitar objetos obsoletos. 
+- Usamos union all para mejorar la performance. 
+- Creación de Constraints luego de la creación de las tablas.
+- Identificamos los campos únicos en las tablas para poder realizar la menor cantidad de comparación en los joins. 
+- Generación de claves subrogadas en tablas Paramétricas para mejorar el rendimiento de operaciones y poder facilitar la lectura de datos mediante ese único identificador.
+- Para la migración de facturas utilizamos tablas temporales para mejorar el rendimiento.
+
+
+ 
