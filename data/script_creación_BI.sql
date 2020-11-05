@@ -22,22 +22,6 @@ IF OBJECT_ID('LOS_GEDDES.Bi_rangos_edades', 'U') IS NOT NULL
 IF OBJECT_ID('LOS_GEDDES.Bi_rangos_potencias', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_rangos_potencias
 
---Droppeo de funciones
-if OBJECT_ID('LOS_GEDDES.rango_potencia')is not null
-	DROP FUNCTION LOS_GEDDES.rango_potencia
-
-IF OBJECT_ID('LOS_GEDDES.edad_en_el_anio', 'FN') IS NOT NULL
-	DROP FUNCTION LOS_GEDDES.edad_en_el_anio
-go
-
-IF OBJECT_ID('LOS_GEDDES.rango_edad', 'FN') IS NOT NULL
-	DROP FUNCTION LOS_GEDDES.rango_edad
-go
-
-IF OBJECT_ID('LOS_GEDDES.rg_edad_en_el_anio', 'FN') IS NOT NULL
-	DROP FUNCTION LOS_GEDDES.rg_edad_en_el_anio
-go
-
 --Creacion de tablas auxiliares
 CREATE TABLE LOS_GEDDES.Bi_Instantes(
   inst_id	bigint IDENTITY(1,1),
@@ -172,13 +156,13 @@ INSERT INTO LOS_GEDDES.Bi_rangos_edades(rged_id, rged_min, rged_max)
 go
 
 create table #operaciones(
-	compra decimal(18,0),
-	venta decimal(18,0),
-	sucursal bigint,
-	anio bigint,
-	mes bigint,
-	cliente bigint,
-	modelo decimal(18,0),
+	compra		 decimal(18,0),
+	venta		 decimal(18,0),
+	sucursal	 bigint,
+	anio		 bigint,
+	mes			 bigint,
+	cliente		 bigint,
+	modelo		 decimal(18,0),
 	precio_total decimal(18,2)
 )
 
@@ -252,4 +236,8 @@ set opau_rg_potencia = (
 print'
 droppeo auxiliares'
 drop table #operaciones
+drop function LOS_GEDDES.edad_en_el_anio
+drop function LOS_GEDDES.rango_edad
+drop function LOS_GEDDES.rg_edad_en_el_anio
+drop function LOS_GEDDES.rango_potencia
 go
