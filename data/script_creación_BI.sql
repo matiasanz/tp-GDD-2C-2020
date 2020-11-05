@@ -163,7 +163,7 @@ create table #operaciones(
 	mes			 bigint,
 	cliente		 bigint,
 	modelo		 decimal(18,0),
-	precio_total decimal(18,2)
+	precio_total decimal(18,2),
 )
 
 print '
@@ -171,14 +171,14 @@ print '
 insert into #Operaciones
 (compra, venta, sucursal, anio, mes, cliente, modelo, precio_total)
 ( 
-	select cpra_numero, null, cpra_sucursal, year(cpra_fecha), MONTH(cpra_fecha), cpra_cliente, auto_modelo, cpra_precio_total 
+	select cpra_numero, null, cpra_sucursal, year(cpra_fecha), MONTH(cpra_fecha), cpra_cliente, auto_modelo, cpra_precio_total
 		from LOS_GEDDES.Compras
 		left join LOS_GEDDES.Automoviles
 			on auto_id=cpra_automovil
 
 	UNION ALL
 
-	select null, fact_numero, fact_sucursal, year(fact_fecha), MONTH(fact_fecha), fact_cliente, auto_modelo, null 
+	select null, fact_numero, fact_sucursal, year(fact_fecha), MONTH(fact_fecha), fact_cliente, auto_modelo, fact_precio 
 		from LOS_GEDDES.Facturas
 		left join LOS_GEDDES.Automoviles
 			on auto_id=fact_automovil
@@ -215,7 +215,7 @@ insert into LOS_GEDDES.Bi_Operaciones_automoviles
 (opau_instante, opau_sucursal, opau_modelo, opau_cant_comprada, opau_costo_total, opau_cant_vendida, opau_total_ventas)
 (
 	select distinct inst_id, sucursal, modelo, sum(iif(compra is not null, 1, 0)) as cantidad_comprada, sum( iif(precio_total is not null, precio_total, 0)) as precio_Compras, sum(iif(venta is not null, 1, 0)) as cantidad_vendida
-	, null as total_ventas --TODO
+	, sum(iif(venta is not null, precio_total, 0)) as total_ventas
 		from #operaciones
 		join LOS_GEDDES.Bi_instantes
 			on inst_anio=anio
@@ -239,13 +239,13 @@ insert into LOS_GEDDES.Bi_Operaciones_autopartes
 , opap_cant_vendida  , opap_total_ventas)
 
 select inst_id, sucursal, autoparte, null as rubro, null as fabricante
-, sum(iif(compra is not null, cantidad, 0)) as cantidad_comprada
-, sum(iif(compra is not null, precio, 0)) as costo_total
-, sum(iif(venta is not null, cantidad, 0)) as cant_vendida
-, null as total_ventas --TODO
+, sum(iif(compra is not null, cantidad	  , 0)) as cantidad_comprada
+, sum(iif(compra is not null, precio_total, 0)) as costo_total
+, sum(iif(venta  is not null, cantidad	  , 0)) as cant_vendida
+, sum(iif(venta  is not null, precio_total, 0)) as total_ventas
 
 	from (
-			select compra, venta, precio_total as precio, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad
+			select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad
 				from #Operaciones
 				join LOS_GEDDES.Items_por_compra
 					on ipco_id_compra=compra
@@ -255,7 +255,7 @@ select inst_id, sucursal, autoparte, null as rubro, null as fabricante
 					
 			union all
 
-			select compra, venta, null, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad
+			select compra, venta, precio_total, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad
 				from #Operaciones
 				join LOS_GEDDES.Items_por_factura
 					on ipfa_factura_numero=venta
@@ -281,8 +281,6 @@ update LOS_GEDDES.Bi_Operaciones_autopartes
 	where apte_codigo=opap_autoparte
 ;
 
-print'
-droppeo auxiliares'
 drop table #operaciones
 drop function LOS_GEDDES.edad_en_el_anio
 drop function LOS_GEDDES.rango_edad

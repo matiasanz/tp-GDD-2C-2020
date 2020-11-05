@@ -158,7 +158,8 @@ CREATE TABLE LOS_GEDDES.Facturas(
   fact_sucursal 		 bigint NOT NULL,
   fact_automovil		 bigint NULL,
   fact_direccion_cliente nvarchar(255) NULL,
-  fact_mail_cliente		 nvarchar(255) NULL
+  fact_mail_cliente		 nvarchar(255) NULL,
+  fact_precio			 decimal(18,2)
 );
 
 CREATE TABLE LOS_GEDDES.Items_por_factura(
@@ -410,7 +411,7 @@ BEGIN
 	INSERT INTO LOS_GEDDES.Facturas
 		
 			SELECT DISTINCT f.nro, f.fecha, c.clie_id, s.sucu_id, 
-			NULL, c.clie_direccion, c.clie_mail
+			NULL, c.clie_direccion, c.clie_mail, null
 			FROM #facturas f
 			INNER JOIN LOS_GEDDES.Clientes c 
 				ON c.clie_dni = f.cliente_dni
@@ -425,7 +426,7 @@ BEGIN
 			UNION ALL
 
 			SELECT DISTINCT f.nro, f.fecha, c.clie_id, s.sucu_id, 
-			a.auto_id, c.clie_direccion, c.clie_mail
+			a.auto_id, c.clie_direccion, c.clie_mail, f.precio_facturado
 			FROM #facturas f
 			INNER JOIN LOS_GEDDES.Automoviles a 
 				ON a.auto_nro_chasis = f.auto_nro_chasis
@@ -449,6 +450,19 @@ BEGIN
 			GROUP BY f.nro, AUTO_PARTE_CODIGO, f.precio_facturado
 
 	DROP TABLE #facturas
+
+	print '
+	* precios facturados en ventas de autopartes'
+
+	UPDATE LOS_GEDDES.Facturas
+		set fact_precio = (
+			select sum(ipfa_cantidad*ipfa_precio_facturado)
+				from Items_por_factura
+				where fact_numero = ipfa_factura_numero
+		)
+		
+		where fact_automovil is null
+	;
 END
 GO
 
