@@ -1,6 +1,9 @@
 USE [GD2C2020]
 GO
 
+if OBJECT_ID('#operaciones')is not null
+	drop table #operaciones -- SACAR
+
 IF OBJECT_ID('LOS_GEDDES.Bi_Estadisticas_clientes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Estadisticas_clientes
 
@@ -18,6 +21,22 @@ IF OBJECT_ID('LOS_GEDDES.Bi_rangos_edades', 'U') IS NOT NULL
 
 IF OBJECT_ID('LOS_GEDDES.Bi_rangos_potencias', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_rangos_potencias
+
+--Droppeo de funciones
+if OBJECT_ID('LOS_GEDDES.rango_potencia')is not null
+	DROP FUNCTION LOS_GEDDES.rango_potencia
+
+IF OBJECT_ID('LOS_GEDDES.edad_en_el_anio', 'FN') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.edad_en_el_anio
+go
+
+IF OBJECT_ID('LOS_GEDDES.rango_edad', 'FN') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.rango_edad
+go
+
+IF OBJECT_ID('LOS_GEDDES.rg_edad_en_el_anio', 'FN') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.rg_edad_en_el_anio
+go
 
 --Creacion de tablas auxiliares
 CREATE TABLE LOS_GEDDES.Bi_Instantes(
@@ -96,6 +115,48 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
   Constraint fk_opap_cate FOREIGN KEY(opap_rubro     ) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo),   
   Constraint fk_opap_fabr FOREIGN KEY(opap_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
  );
+go
+
+--Creacion de funciones
+CREATE FUNCTION LOS_GEDDES.edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint
+	AS BEGIN return @unAnio-YEAR(@fechaNacimiento) END
+go
+
+CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint 
+	AS BEGIN
+		DECLARE @rg_edad_18_30   bigint = 1 --CUANDO hagamos procedure, se lo pasamos como argumento
+		DECLARE @rg_edad_31_50   bigint = 2 
+		DECLARE @rg_edad_mayor50 bigint = 3 
+
+		return CASE
+			when @edad BETWEEN 18 and 30 then @rg_edad_18_30 
+			when @edad BETWEEN 31 and 50 then @rg_edad_31_50
+			when @edad > 51 then @rg_edad_mayor50
+			else 0
+		END
+END
+go
+
+CREATE FUNCTION LOS_GEDDES.rg_edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint
+	AS BEGIN
+		return LOS_GEDDES.rango_edad(LOS_GEDDES.edad_en_el_anio(@fechaNacimiento, @unAnio))
+	END
+go
+
+CREATE FUNCTION LOS_GEDDES.rango_potencia(@potencia decimal(18,0)) RETURNS bigint 
+	AS BEGIN
+		DECLARE @rg_menor   bigint = 1
+		DECLARE @rg_medio   bigint = 2 
+		DECLARE @rg_mayor   bigint = 3 
+
+		return CASE
+			when @potencia BETWEEN 50 and 150 then @rg_menor 
+			when @potencia BETWEEN 151 and 300 then @rg_medio
+			when @potencia > 300 then @rg_mayor
+			else 0
+	END
+END
+go
 
 --Migracion del modelo
 print '>> Rangos potencias'
@@ -110,82 +171,40 @@ INSERT INTO LOS_GEDDES.Bi_rangos_edades(rged_id, rged_min, rged_max)
 ;
 go
 
-IF OBJECT_ID('LOS_GEDDES.edad_en_el_anio', 'FN') IS NOT NULL
-	DROP FUNCTION LOS_GEDDES.edad_en_el_anio
-go
-
-CREATE FUNCTION LOS_GEDDES.edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint
-AS
-BEGIN
-	return @unAnio-YEAR(@fechaNacimiento)
-END
-go
-
-IF OBJECT_ID('LOS_GEDDES.rango_edad', 'FN') IS NOT NULL
-	DROP FUNCTION LOS_GEDDES.rango_edad
-go
-
-
-CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint 
-AS
-BEGIN
-	DECLARE @rg_edad_18_30   bigint = 1
-	DECLARE @rg_edad_31_50   bigint = 2 
-	DECLARE @rg_edad_mayor50 bigint = 3 
-
-	return CASE
-		when @edad BETWEEN 18 and 30 then @rg_edad_18_30 
-		when @edad BETWEEN 31 and 50 then @rg_edad_31_50
-		when @edad > 51 then @rg_edad_mayor50
-		else 0
-	END
-END
-go
-
-IF OBJECT_ID('LOS_GEDDES.rg_edad_en_el_anio', 'FN') IS NOT NULL
-	DROP FUNCTION LOS_GEDDES.rg_edad_en_el_anio
-
-go
-
-CREATE FUNCTION LOS_GEDDES.rg_edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint
-AS
-BEGIN
-	return LOS_GEDDES.rango_edad(LOS_GEDDES.edad_en_el_anio(@fechaNacimiento, @unAnio))
-END
-go
-
-create table #Compras(
-id decimal(18,0),
-sucursal bigint,
-anio bigint,
-mes bigint,
-cliente bigint
-);
-
-create table #Ventas(
-id decimal(18,0),
-sucursal bigint,
-anio bigint,
-mes bigint,
-cliente bigint
-);
+create table #operaciones(
+	compra decimal(18,0),
+	venta decimal(18,0),
+	sucursal bigint,
+	anio bigint,
+	mes bigint,
+	cliente bigint,
+	modelo decimal(18,0),
+	precio_total decimal(18,2)
+)
 
 print '
->> Tablas temporales compras y ventas con fecha y año'
-insert into #Compras
-	select cpra_numero, cpra_sucursal, year(cpra_fecha), MONTH(cpra_fecha), cpra_cliente 
+>> tabla temporal de Operaciones de compraventa'
+insert into #Operaciones
+(compra, venta, sucursal, anio, mes, cliente, modelo, precio_total)
+( 
+	select cpra_numero, null, cpra_sucursal, year(cpra_fecha), MONTH(cpra_fecha), cpra_cliente, auto_modelo, cpra_precio_total 
 		from LOS_GEDDES.Compras
-insert into #Ventas
-	select fact_numero, fact_sucursal, year(fact_fecha), MONTH(fact_fecha), fact_cliente 
+		left join LOS_GEDDES.Automoviles
+			on auto_id=cpra_automovil
+
+	UNION ALL
+
+	select null, fact_numero, fact_sucursal, year(fact_fecha), MONTH(fact_fecha), fact_cliente, auto_modelo, null 
 		from LOS_GEDDES.Facturas
+		left join LOS_GEDDES.Automoviles
+			on auto_id=fact_automovil
+);
 
 print '
 >> Instantes de tiempo'
 insert into LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)
 (
-	select mes, anio from #Compras
-	union 
-	select mes, anio from #ventas
+	select distinct mes, anio from #operaciones
 );
 
 print '
@@ -197,24 +216,9 @@ INSERT INTO LOS_GEDDES.Bi_Estadisticas_clientes
 		from (
 			select *, LOS_GEDDES.rg_edad_en_el_anio(clie_fecha_nac, anio) as rg_edad 
 				from LOS_GEDDES.Clientes 
-				join #Compras 
+				join #Operaciones
 					on clie_id=cliente
-		) as Clientes_de_compras
-		
-		join LOS_GEDDES.Bi_Instantes
-			on inst_mes = mes
-			and inst_anio=anio
-		group by sucursal, inst_id, rg_edad, clie_sexo
-
-	union all
-
-	Select distinct inst_id, sucursal, clie_sexo, rg_edad, count(*)
-		from (
-			select *, LOS_GEDDES.rg_edad_en_el_anio(clie_fecha_nac, anio) as rg_edad 
-				from LOS_GEDDES.Clientes 
-				join #Ventas 
-					on clie_id=cliente
-		) as Clientes_de_ventas
+		) as Clientes
 		
 		join LOS_GEDDES.Bi_Instantes
 			on inst_mes = mes
@@ -222,5 +226,30 @@ INSERT INTO LOS_GEDDES.Bi_Estadisticas_clientes
 		group by sucursal, inst_id, rg_edad, clie_sexo
 );
 
-drop table #Compras
-drop table #Ventas
+print '
+>> operaciones de automoviles'
+insert into LOS_GEDDES.Bi_Operaciones_automoviles
+(opau_instante, opau_sucursal, opau_modelo, opau_cant_comprada, opau_costo_total, opau_cant_vendida, opau_total_ventas)
+(
+	select distinct inst_id, sucursal, modelo, sum(iif(compra is not null, 1, 0)) as cantidad_comprada, sum( iif(precio_total is not null, precio_total, 0)) as precio_Compras, sum(iif(venta is not null, 1, 0)) as cantidad_vendida, null
+		from #operaciones
+		join LOS_GEDDES.Bi_instantes
+			on inst_anio=anio
+			and inst_mes=mes
+		where modelo is not null
+		group by modelo, sucursal, inst_id
+);
+
+print '
+>> Calculo rango de potencia'
+update LOS_GEDDES.Bi_Operaciones_automoviles
+set opau_rg_potencia = (
+	select LOS_GEDDES.rango_potencia(mode_potencia)
+		from LOS_GEDDES.Modelos_automoviles
+		where mode_codigo=opau_modelo
+);
+
+print'
+droppeo auxiliares'
+drop table #operaciones
+go
