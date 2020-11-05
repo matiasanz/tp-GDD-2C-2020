@@ -1,22 +1,22 @@
 USE [GD2C2020]
 GO
 
-IF OBJECT_ID('LOS_GEDDES.Bi_Estadisticas_clientes') IS NOT NULL
+IF OBJECT_ID('LOS_GEDDES.Bi_Estadisticas_clientes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Estadisticas_clientes
 
-IF OBJECT_ID('LOS_GEDDES.Bi_Operaciones_automoviles') IS NOT NULL
+IF OBJECT_ID('LOS_GEDDES.Bi_Operaciones_automoviles', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Operaciones_automoviles
 
-IF OBJECT_ID('LOS_GEDDES.Bi_Operaciones_autopartes') IS NOT NULL
+IF OBJECT_ID('LOS_GEDDES.Bi_Operaciones_autopartes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Operaciones_autopartes
 
-IF OBJECT_ID('LOS_GEDDES.Bi_Instantes') IS NOT NULL
+IF OBJECT_ID('LOS_GEDDES.Bi_Instantes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Instantes
 
-IF OBJECT_ID('LOS_GEDDES.Bi_rangos_edades') IS NOT NULL
+IF OBJECT_ID('LOS_GEDDES.Bi_rangos_edades', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_rangos_edades
 
-IF OBJECT_ID('LOS_GEDDES.Bi_rangos_potencias') IS NOT NULL
+IF OBJECT_ID('LOS_GEDDES.Bi_rangos_potencias', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_rangos_potencias
 
 --Creacion de tablas auxiliares
@@ -29,7 +29,7 @@ CREATE TABLE LOS_GEDDES.Bi_Instantes(
 );
 
 CREATE TABLE LOS_GEDDES.Bi_rangos_potencias(
-  rgpo_id  bigint IDENTITY(1,1),
+  rgpo_id  bigint,
   rgpo_min decimal(18,0),
   rgpo_max decimal(18,0)
 
@@ -37,7 +37,7 @@ CREATE TABLE LOS_GEDDES.Bi_rangos_potencias(
 );
 
 CREATE TABLE LOS_GEDDES.Bi_rangos_edades(
-  rged_id  bigint IDENTITY(1,1),
+  rged_id  bigint,
   rged_min smallint,
   rged_max smallint
 
@@ -96,3 +96,131 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
   Constraint fk_opap_cate FOREIGN KEY(opap_rubro     ) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo),   
   Constraint fk_opap_fabr FOREIGN KEY(opap_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
  );
+
+--Migracion del modelo
+print '>> Rangos potencias'
+INSERT INTO LOS_GEDDES.Bi_rangos_potencias(rgpo_id, rgpo_min, rgpo_max)
+	Values (1, 50,150), (2, 151, 300), (3, 301, null)
+;
+
+print '
+>> Rangos edades'
+INSERT INTO LOS_GEDDES.Bi_rangos_edades(rged_id, rged_min, rged_max)
+	Values (0, 0, 17), (1, 18, 30), (2, 31, 50), (3, 51, null)
+;
+go
+
+IF OBJECT_ID('LOS_GEDDES.edad_en_el_anio', 'FN') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.edad_en_el_anio
+go
+
+CREATE FUNCTION LOS_GEDDES.edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint
+AS
+BEGIN
+	return @unAnio-YEAR(@fechaNacimiento)
+END
+go
+
+IF OBJECT_ID('LOS_GEDDES.rango_edad', 'FN') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.rango_edad
+go
+
+
+CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint 
+AS
+BEGIN
+	DECLARE @rg_edad_18_30   bigint = 1
+	DECLARE @rg_edad_31_50   bigint = 2 
+	DECLARE @rg_edad_mayor50 bigint = 3 
+
+	return CASE
+		when @edad BETWEEN 18 and 30 then @rg_edad_18_30 
+		when @edad BETWEEN 31 and 50 then @rg_edad_31_50
+		when @edad > 51 then @rg_edad_mayor50
+		else 0
+	END
+END
+go
+
+IF OBJECT_ID('LOS_GEDDES.rg_edad_en_el_anio', 'FN') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.rg_edad_en_el_anio
+
+go
+
+CREATE FUNCTION LOS_GEDDES.rg_edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint
+AS
+BEGIN
+	return LOS_GEDDES.rango_edad(LOS_GEDDES.edad_en_el_anio(@fechaNacimiento, @unAnio))
+END
+go
+
+create table #Compras(
+id decimal(18,0),
+sucursal bigint,
+anio bigint,
+mes bigint,
+cliente bigint
+);
+
+create table #Ventas(
+id decimal(18,0),
+sucursal bigint,
+anio bigint,
+mes bigint,
+cliente bigint
+);
+
+print '
+>> Tablas temporales compras y ventas con fecha y año'
+insert into #Compras
+	select cpra_numero, cpra_sucursal, year(cpra_fecha), MONTH(cpra_fecha), cpra_cliente 
+		from LOS_GEDDES.Compras
+insert into #Ventas
+	select fact_numero, fact_sucursal, year(fact_fecha), MONTH(fact_fecha), fact_cliente 
+		from LOS_GEDDES.Facturas
+
+print '
+>> Instantes de tiempo'
+insert into LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)
+(
+	select mes, anio from #Compras
+	union 
+	select mes, anio from #ventas
+);
+
+print '
+>> estadisticas clientes'
+INSERT INTO LOS_GEDDES.Bi_Estadisticas_clientes
+(ecli_instante, ecli_sucursal, ecli_sexo, ecli_rg_edad, ecli_cantidad)
+(
+	Select distinct inst_id, sucursal, clie_sexo, rg_edad, count(*)
+		from (
+			select *, LOS_GEDDES.rg_edad_en_el_anio(clie_fecha_nac, anio) as rg_edad 
+				from LOS_GEDDES.Clientes 
+				join #Compras 
+					on clie_id=cliente
+		) as Clientes_de_compras
+		
+		join LOS_GEDDES.Bi_Instantes
+			on inst_mes = mes
+			and inst_anio=anio
+		group by sucursal, inst_id, rg_edad, clie_sexo
+
+	union all
+
+	Select distinct inst_id, sucursal, clie_sexo, rg_edad, count(*)
+		from (
+			select *, LOS_GEDDES.rg_edad_en_el_anio(clie_fecha_nac, anio) as rg_edad 
+				from LOS_GEDDES.Clientes 
+				join #Ventas 
+					on clie_id=cliente
+		) as Clientes_de_ventas
+		
+		join LOS_GEDDES.Bi_Instantes
+			on inst_mes = mes
+			and inst_anio=anio
+		group by sucursal, inst_id, rg_edad, clie_sexo
+);
+
+drop table #Compras
+drop table #Ventas
