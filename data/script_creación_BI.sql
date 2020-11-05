@@ -237,38 +237,39 @@ print '
 insert into LOS_GEDDES.Bi_Operaciones_autopartes
 (opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada,opap_costo_total
 , opap_cant_vendida  , opap_total_ventas)
+(
+	select inst_id, sucursal, autoparte, null as rubro, null as fabricante
+	, sum(iif(compra is not null, cantidad	  , 0)) as cantidad_comprada
+	, sum(iif(compra is not null, precio_total, 0)) as costo_total
+	, sum(iif(venta  is not null, cantidad	  , 0)) as cant_vendida
+	, sum(iif(venta  is not null, precio_total, 0)) as total_ventas
 
-select inst_id, sucursal, autoparte, null as rubro, null as fabricante
-, sum(iif(compra is not null, cantidad	  , 0)) as cantidad_comprada
-, sum(iif(compra is not null, precio_total, 0)) as costo_total
-, sum(iif(venta  is not null, cantidad	  , 0)) as cant_vendida
-, sum(iif(venta  is not null, precio_total, 0)) as total_ventas
-
-	from (
-			select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad
-				from #Operaciones
-				join LOS_GEDDES.Items_por_compra
-					on ipco_id_compra=compra
-				where 
-					compra is not null
-					and modelo is null
+		from (
+				select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad
+					from #Operaciones
+					join LOS_GEDDES.Items_por_compra
+						on ipco_id_compra=compra
+					where 
+						compra is not null
+						and modelo is null
 					
-			union all
+				union all
 
-			select compra, venta, precio_total, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad
-				from #Operaciones
-				join LOS_GEDDES.Items_por_factura
-					on ipfa_factura_numero=venta
-				where 
-					compra is null 
-					and modelo is null
-	) as Operaciones_autopartes
+				select compra, venta, precio_total, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad
+					from #Operaciones
+					join LOS_GEDDES.Items_por_factura
+						on ipfa_factura_numero=venta
+					where 
+						compra is null 
+						and modelo is null
+		) as Operaciones_autopartes
 
-	join LOS_GEDDES.Bi_Instantes
-		on inst_anio=anio
-		and inst_mes=mes
+		join LOS_GEDDES.Bi_Instantes
+			on inst_anio=anio
+			and inst_mes=mes
 
-	group by inst_id, sucursal, autoparte
+		group by inst_id, sucursal, autoparte
+);
 
 print'
 >> Fabricantes y rubros'
