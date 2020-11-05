@@ -186,8 +186,7 @@ insert into #Operaciones
 
 print '
 >> Instantes de tiempo'
-insert into LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)
-(
+insert into LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)(
 	select distinct mes, anio from #operaciones
 );
 
@@ -215,7 +214,8 @@ print '
 insert into LOS_GEDDES.Bi_Operaciones_automoviles
 (opau_instante, opau_sucursal, opau_modelo, opau_cant_comprada, opau_costo_total, opau_cant_vendida, opau_total_ventas)
 (
-	select distinct inst_id, sucursal, modelo, sum(iif(compra is not null, 1, 0)) as cantidad_comprada, sum( iif(precio_total is not null, precio_total, 0)) as precio_Compras, sum(iif(venta is not null, 1, 0)) as cantidad_vendida, null
+	select distinct inst_id, sucursal, modelo, sum(iif(compra is not null, 1, 0)) as cantidad_comprada, sum( iif(precio_total is not null, precio_total, 0)) as precio_Compras, sum(iif(venta is not null, 1, 0)) as cantidad_vendida
+	, null as total_ventas --TODO
 		from #operaciones
 		join LOS_GEDDES.Bi_instantes
 			on inst_anio=anio
@@ -227,11 +227,59 @@ insert into LOS_GEDDES.Bi_Operaciones_automoviles
 print '
 >> Calculo rango de potencia'
 update LOS_GEDDES.Bi_Operaciones_automoviles
-set opau_rg_potencia = (
-	select LOS_GEDDES.rango_potencia(mode_potencia)
+	set opau_rg_potencia = LOS_GEDDES.rango_potencia(mode_potencia)
 		from LOS_GEDDES.Modelos_automoviles
 		where mode_codigo=opau_modelo
-);
+;
+
+print '
+>> Operaciones de autopartes'
+insert into LOS_GEDDES.Bi_Operaciones_autopartes
+(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada,opap_costo_total
+, opap_cant_vendida  , opap_total_ventas)
+
+select inst_id, sucursal, autoparte, null as rubro, null as fabricante
+, sum(iif(compra is not null, cantidad, 0)) as cantidad_comprada
+, sum(iif(compra is not null, precio, 0)) as costo_total
+, sum(iif(venta is not null, cantidad, 0)) as cant_vendida
+, null as total_ventas --TODO
+
+	from (
+			select compra, venta, precio_total as precio, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad
+				from #Operaciones
+				join LOS_GEDDES.Items_por_compra
+					on ipco_id_compra=compra
+				where 
+					compra is not null
+					and modelo is null
+					
+			union all
+
+			select compra, venta, null, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad
+				from #Operaciones
+				join LOS_GEDDES.Items_por_factura
+					on ipfa_factura_numero=venta
+				where 
+					compra is null 
+					and modelo is null
+	) as Operaciones_autopartes
+
+	join LOS_GEDDES.Bi_Instantes
+		on inst_anio=anio
+		and inst_mes=mes
+
+	group by inst_id, sucursal, autoparte
+
+print'
+>> Fabricantes y rubros'
+
+update LOS_GEDDES.Bi_Operaciones_autopartes
+	set opap_rubro = apte_categoria
+	  , opap_fabricante = apte_fabricante
+	
+	from LOS_GEDDES.Autopartes
+	where apte_codigo=opap_autoparte
+;
 
 print'
 droppeo auxiliares'
