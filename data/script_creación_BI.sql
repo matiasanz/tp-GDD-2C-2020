@@ -22,7 +22,7 @@ IF OBJECT_ID('LOS_GEDDES.Bi_rangos_edades', 'U') IS NOT NULL
 IF OBJECT_ID('LOS_GEDDES.Bi_rangos_potencias', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_rangos_potencias
 
---Creacion de tablas auxiliares
+--Creacion de dimensiones
 CREATE TABLE LOS_GEDDES.Bi_Instantes(
   inst_id	bigint IDENTITY(1,1),
   inst_mes  tinyint,
@@ -115,7 +115,7 @@ CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint
 		return CASE
 			when @edad BETWEEN 18 and 30 then @rg_edad_18_30 
 			when @edad BETWEEN 31 and 50 then @rg_edad_31_50
-			when @edad > 51 then @rg_edad_mayor50
+			when @edad > 50 then @rg_edad_mayor50
 			else 0
 		END
 END
