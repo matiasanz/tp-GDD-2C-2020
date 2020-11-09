@@ -324,7 +324,6 @@ CREATE VIEW LOS_GEDDES.promedio_precios_mensuales_sucursales AS
 		,   iif(precio_promedio_venta>0, precio_promedio_venta, null) as [precio promedio ventas]
 	
 		from(
-		--sacar joins de aca y pasar al otro select para mejorar perfoormance
 			select opau_instante as instante, opau_sucursal as sucursal 
 					, cast(avg(iif(opau_tipo_operacion='c', opau_precio, 0)) as decimal(18,2)) as precio_promedio_compra
 					, cast(avg(iif(opau_tipo_operacion='v', opau_precio, 0)) as decimal(18,2)) as precio_promedio_venta
