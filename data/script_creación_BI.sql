@@ -116,8 +116,8 @@ CREATE FUNCTION LOS_GEDDES.edad_en_el_anio(@fechaNacimiento datetime2(3), @unAni
 	AS BEGIN return @unAnio-YEAR(@fechaNacimiento) END
 go
 
-CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint 
-	AS BEGIN
+CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint AS 
+	BEGIN
 		DECLARE @rg_edad_18_30   bigint = 1 --CUANDO hagamos procedure, se lo pasamos como argumento
 		DECLARE @rg_edad_31_50   bigint = 2 
 		DECLARE @rg_edad_mayor50 bigint = 3 
@@ -128,17 +128,17 @@ CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint
 			when @edad > 50 then @rg_edad_mayor50
 			else 0
 		END
-END
+	END
 go
 
-CREATE FUNCTION LOS_GEDDES.rg_edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint
-	AS BEGIN
+CREATE FUNCTION LOS_GEDDES.rg_edad_en_el_anio(@fechaNacimiento datetime2(3), @unAnio bigint) RETURNS bigint AS 
+	BEGIN
 		return LOS_GEDDES.rango_edad(LOS_GEDDES.edad_en_el_anio(@fechaNacimiento, @unAnio))
 	END
 go
 
-CREATE FUNCTION LOS_GEDDES.rango_potencia(@potencia decimal(18,0)) RETURNS bigint 
-	AS BEGIN
+CREATE FUNCTION LOS_GEDDES.rango_potencia(@potencia decimal(18,0)) RETURNS bigint AS
+	BEGIN
 		DECLARE @rg_menor   bigint = 1
 		DECLARE @rg_medio   bigint = 2 
 		DECLARE @rg_mayor   bigint = 3 
@@ -152,18 +152,18 @@ CREATE FUNCTION LOS_GEDDES.rango_potencia(@potencia decimal(18,0)) RETURNS bigin
 END
 go
 
-create function LOS_GEDDES.instante_en_meses(@mes bigint, @anio bigint) returns bigint as
-	begin
+CREATE FUNCTION LOS_GEDDES.instante_en_meses(@mes bigint, @anio bigint) returns bigint as
+	BEGIN
 		return @mes + @anio*12
-	end
+	END
 ;
 go
 
-create function LOS_GEDDES.instante_actual_en_meses() returns bigint as
-	begin
+CREATE FUNCTION LOS_GEDDES.instante_actual_en_meses() returns bigint AS
+	BEGIN
 		declare @fecha_actual datetime = getdate();
 		return LOS_GEDDES.instante_en_meses(month(@fecha_actual), year(@fecha_actual));
-	end;
+	END;
 go
 
 --Migracion del modelo
@@ -301,7 +301,8 @@ update LOS_GEDDES.Bi_Operaciones_autopartes
 go
 
 --Creacion de vistas
-CREATE VIEW LOS_GEDDES.compraventa_mensual_sucursales AS(
+CREATE VIEW LOS_GEDDES.compraventa_mensual_sucursales AS
+(
 	select inst_anio, inst_mes, ciud_nombre, sucu_direccion
 		, sum(iif(opau_tipo_operacion='c', 1, 0)) as cantidad_comprada
 		, sum(iif(opau_tipo_operacion='v', 1, 0)) as cantidad_vendida
@@ -318,7 +319,7 @@ CREATE VIEW LOS_GEDDES.compraventa_mensual_sucursales AS(
 go
 
 CREATE VIEW LOS_GEDDES.promedio_precios_mensuales_sucursales AS
-
+(
 	select inst_anio as anio, inst_mes as mes, ciud_nombre as sucursal_ciudad, sucu_direccion as sucursal_direccion
 		,	iif(precio_promedio_compra>0, precio_promedio_compra, null) as [precio promedio compra]
 		,   iif(precio_promedio_venta>0, precio_promedio_venta, null) as [precio promedio ventas]
@@ -337,10 +338,11 @@ CREATE VIEW LOS_GEDDES.promedio_precios_mensuales_sucursales AS
 			on ciud_id=sucu_ciudad
 		join LOS_GEDDES.Bi_Instantes
 			on inst_id=instante
-;
+);
 go
 
 CREATE VIEW LOS_GEDDES.ganancias_mensuales_sucursales AS
+(
 	select distinct inst_anio anio, inst_mes mes, ciud_nombre sucursal_ciudad, sucu_direccion sucursal_direccion, sum(ventas.opau_precio - compras.opau_precio) as ganancia_mensual
 	
 		from LOS_GEDDES.Bi_Operaciones_automoviles ventas
@@ -355,10 +357,11 @@ CREATE VIEW LOS_GEDDES.ganancias_mensuales_sucursales AS
 			on ciud_id=sucu_ciudad
 		where ventas.opau_tipo_operacion='v'
 		group by inst_anio, inst_mes, sucu_id, ciud_nombre, sucu_direccion
-;
+);
 go
 
 CREATE VIEW LOS_GEDDES.tiempo_promedio_en_stock_automoviles AS
+(
 	select mode_nombre as modelo, 
 		avg(
 			iif(fecha_venta.inst_anio is null
@@ -379,7 +382,7 @@ CREATE VIEW LOS_GEDDES.tiempo_promedio_en_stock_automoviles AS
 			on compras.opau_modelo=mode_codigo
 		where compras.opau_tipo_operacion='c'
 		group by mode_nombre
-;
+);
 go
 
 drop table #operaciones
