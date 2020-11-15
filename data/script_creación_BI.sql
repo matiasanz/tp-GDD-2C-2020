@@ -98,9 +98,10 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
   opap_rubro	     bigint,
   opap_fabricante	 bigint,
   opap_cant_comprada decimal(18,0),
-  opap_costo_total	 decimal(18,2),
+  opap_costo_unitario	 decimal(18,2),
   opap_cant_vendida  decimal(18,0),
-  opap_total_ventas  decimal(18,2)
+  opap_precio_venta  decimal(18,2),
+  opap_stock		 bigint
 
   Constraint pk_opap	  PRIMARY KEY(opap_id        ),
   Constraint fk_opap_inst FOREIGN KEY(opap_instante  ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
@@ -252,17 +253,17 @@ insert into LOS_GEDDES.Bi_Operaciones_automoviles
 print '
 >> Operaciones de autopartes'
 insert into LOS_GEDDES.Bi_Operaciones_autopartes
-(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada,opap_costo_total
-, opap_cant_vendida  , opap_total_ventas)
+(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada,opap_precio_unitario
+, opap_cant_vendida  , opap_precio_venta)
 (
 	select inst_id, sucursal, autoparte, null as rubro, null as fabricante
 	, sum(iif(compra is not null, cantidad	  , 0)) as cantidad_comprada
-	, sum(iif(compra is not null, precio_total, 0)) as costo_total
+	, precio_venta
 	, sum(iif(venta  is not null, cantidad	  , 0)) as cant_vendida
-	, sum(iif(venta  is not null, precio_total, 0)) as total_ventas
+	, precio_facturado
 
 		from (
-				select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad
+				select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad, ipco_precio as precio_venta,0
 					from #Operaciones
 					join LOS_GEDDES.Items_por_compra
 						on ipco_id_compra=compra
@@ -272,7 +273,7 @@ insert into LOS_GEDDES.Bi_Operaciones_autopartes
 					
 				union all
 
-				select compra, venta, precio_total, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad
+				select compra, venta, precio_total, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad,0 as precio_venta, ipfa_precio_facturado as precio_facturado
 					from #Operaciones
 					join LOS_GEDDES.Items_por_factura
 						on ipfa_factura_numero=venta
@@ -385,6 +386,61 @@ CREATE VIEW LOS_GEDDES.tiempo_promedio_en_stock_automoviles AS
 );
 go
 
+
+-- VERLO
+
+create index indx_items_factura_factura_numero ON LOS_GEDDES.Items_por_factura(ipfa_factura_numero)
+create index indx_items_factura_id_autoparte ON LOS_GEDDES.Items_por_factura(ipfa_id_autoparte)
+
+create index indx_items_compra_compra_numero ON LOS_GEDDES.Items_por_compra(ipco_id_compra)
+create index indx_items_compra_id_autoparte ON LOS_GEDDES.Items_por_compra(ipco_id_autoparte)
+
+
+create index indx_items_compra_id_autoparte_cpra ON LOS_GEDDES.Items_por_compra(ipco_id_autoparte,ipco_id_compra)
+
+create index indx_facturas_sucursal ON LOS_GEDDES.Facturas(fact_sucursal)
+create index indx_compras_sucursal ON LOS_GEDDES.Compras(cpra_sucursal)
+
+
+CREATE VIEW LOS_GEDDES.Autoparte_ganancias AS
+(
+	SELECT inst_anio as anio, inst_mes as mes, sucu_ciudad as sucursal_ciudad, sucu_direccion as sucursal_direccion,
+		sum((opap_precio_venta * opap_cant_vendida) - (opap_precio_unitario * opap_cant_comprada)) as ganancia
+	FROM LOS_GEDDES.Bi_Operaciones_autopartes 
+	JOIN LOS_GEDDES.Bi_Instantes ON inst_id = opap_instante
+	JOIN LOS_GEDDES.Sucursales ON sucu_id = opap_sucursal
+	GROUP BY inst_anio,inst_mes,sucu_ciudad,sucu_direccion
+);
+go
+
+create function LOS_GEDDES.Stock(
+	@instancia bigint,
+	@autoparte bigint,
+	@sucursal bigint
+)
+returns bigint
+AS
+	BEGIN
+		DECLARE @anio bigint,@mes bigint;
+
+		select top 1 @anio = inst_anio, @mes = inst_mes from LOS_GEDDES.Bi_Instantes where inst_id = @instancia;
+		
+		return ISNULL((
+		(select sum(ISNULL(ic2.ipco_cantidad,0)) from LOS_GEDDES.Compras c1 
+		JOIN LOS_GEDDES.Items_por_compra ic2 ON ic2.ipco_id_autoparte = @autoparte and c1.cpra_numero = ic2.ipco_id_compra
+		where ((YEAR(c1.cpra_fecha) = @anio and MONTH(c1.cpra_fecha) < @mes) or YEAR(c1.cpra_fecha)< @anio) and 
+			 c1.cpra_sucursal = @sucursal)
+		-
+		(select sum(ISNULL(i2.ipfa_cantidad,0)) from LOS_GEDDES.Facturas f2 
+		JOIN LOS_GEDDES.Items_por_factura i2 ON i2.ipfa_factura_numero = f2.fact_numero
+		where ((YEAR(f2.fact_fecha) = @anio and MONTH(f2.fact_fecha) < @mes) or YEAR(f2.fact_fecha)< @anio) and 
+			i2.ipfa_id_autoparte = @autoparte and f2.fact_sucursal = @sucursal)
+		),0);
+	END
+go
+
+update LOS_GEDDES.Bi_Operaciones_autopartes set opap_stock = LOS_GEDDES.Stock(opap_instante,opap_autoparte,opap_sucursal)
+
 drop table #operaciones
 drop function LOS_GEDDES.edad_en_el_anio
 drop function LOS_GEDDES.rango_edad
@@ -392,3 +448,4 @@ drop function LOS_GEDDES.rg_edad_en_el_anio
 drop function LOS_GEDDES.rango_potencia
 drop function LOS_GEDDES.instante_en_meses
 drop function LOS_GEDDES.instante_actual_en_meses
+drop function LOS_GEDDES.Autoparte_ganancias
