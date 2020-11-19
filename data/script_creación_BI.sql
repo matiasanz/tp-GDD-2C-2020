@@ -253,17 +253,21 @@ insert into LOS_GEDDES.Bi_Operaciones_automoviles
 print '
 >> Operaciones de autopartes'
 insert into LOS_GEDDES.Bi_Operaciones_autopartes
-(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada,opap_precio_unitario
-, opap_cant_vendida  , opap_precio_venta)
+(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada,opap_precio_venta
+, opap_cant_vendida  , opap_stock)
 (
-	select inst_id, sucursal, autoparte, null as rubro, null as fabricante
-	, sum(iif(compra is not null, cantidad	  , 0)) as cantidad_comprada
+	select inst_id
+	, sucursal
+	, autoparte
+	, null as rubro
+	, null as fabricante
+	, sum(iif(compra is not null, cantidad, 0)) as cantidad_comprada
 	, precio_venta
-	, sum(iif(venta  is not null, cantidad	  , 0)) as cant_vendida
-	, precio_facturado
+	, sum(iif(venta  is not null, cantidad, 0)) as cant_vendida
+	, null as stock
 
 		from (
-				select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad, ipco_precio as precio_venta,0
+				select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad, ipco_precio as precio_venta, 0 as precio_facturado
 					from #Operaciones
 					join LOS_GEDDES.Items_por_compra
 						on ipco_id_compra=compra
@@ -286,9 +290,9 @@ insert into LOS_GEDDES.Bi_Operaciones_autopartes
 			on inst_anio=anio
 			and inst_mes=mes
 
-		group by inst_id, sucursal, autoparte
+		group by inst_id, sucursal, autoparte, precio_venta, precio_facturado
 );
-
+go
 print'
 >> Fabricantes y rubros'
 
@@ -392,20 +396,19 @@ go
 create index indx_items_factura_factura_numero ON LOS_GEDDES.Items_por_factura(ipfa_factura_numero)
 create index indx_items_factura_id_autoparte ON LOS_GEDDES.Items_por_factura(ipfa_id_autoparte)
 
-create index indx_items_compra_compra_numero ON LOS_GEDDES.Items_por_compra(ipco_id_compra)
-create index indx_items_compra_id_autoparte ON LOS_GEDDES.Items_por_compra(ipco_id_autoparte)
-
+--create index indx_items_compra_compra_numero ON LOS_GEDDES.Items_por_compra(ipco_id_compra)
+--create index indx_items_compra_id_autoparte ON LOS_GEDDES.Items_por_compra(ipco_id_autoparte)
 
 create index indx_items_compra_id_autoparte_cpra ON LOS_GEDDES.Items_por_compra(ipco_id_autoparte,ipco_id_compra)
 
 create index indx_facturas_sucursal ON LOS_GEDDES.Facturas(fact_sucursal)
 create index indx_compras_sucursal ON LOS_GEDDES.Compras(cpra_sucursal)
-
+go
 
 CREATE VIEW LOS_GEDDES.Autoparte_ganancias AS
 (
 	SELECT inst_anio as anio, inst_mes as mes, sucu_ciudad as sucursal_ciudad, sucu_direccion as sucursal_direccion,
-		sum((opap_precio_venta * opap_cant_vendida) - (opap_precio_unitario * opap_cant_comprada)) as ganancia
+		sum((opap_precio_venta * opap_cant_vendida) - (opap_precio_venta * opap_cant_comprada)) as ganancia
 	FROM LOS_GEDDES.Bi_Operaciones_autopartes 
 	JOIN LOS_GEDDES.Bi_Instantes ON inst_id = opap_instante
 	JOIN LOS_GEDDES.Sucursales ON sucu_id = opap_sucursal
@@ -414,7 +417,7 @@ CREATE VIEW LOS_GEDDES.Autoparte_ganancias AS
 go
 
 create function LOS_GEDDES.Stock(
-	@instancia bigint,
+	@instante bigint,
 	@autoparte bigint,
 	@sucursal bigint
 )
@@ -423,7 +426,7 @@ AS
 	BEGIN
 		DECLARE @anio bigint,@mes bigint;
 
-		select top 1 @anio = inst_anio, @mes = inst_mes from LOS_GEDDES.Bi_Instantes where inst_id = @instancia;
+		select top 1 @anio = inst_anio, @mes = inst_mes from LOS_GEDDES.Bi_Instantes where inst_id = @instante;
 		
 		return ISNULL((
 		(select sum(ISNULL(ic2.ipco_cantidad,0)) from LOS_GEDDES.Compras c1 
@@ -439,7 +442,10 @@ AS
 	END
 go
 
+print '
+>> Calculo de Stock'
 update LOS_GEDDES.Bi_Operaciones_autopartes set opap_stock = LOS_GEDDES.Stock(opap_instante,opap_autoparte,opap_sucursal)
+go
 
 drop table #operaciones
 drop function LOS_GEDDES.edad_en_el_anio
@@ -448,4 +454,11 @@ drop function LOS_GEDDES.rg_edad_en_el_anio
 drop function LOS_GEDDES.rango_potencia
 drop function LOS_GEDDES.instante_en_meses
 drop function LOS_GEDDES.instante_actual_en_meses
-drop function LOS_GEDDES.Autoparte_ganancias
+drop view LOS_GEDDES.Autoparte_ganancias
+drop function LOS_GEDDES.Stock
+drop index LOS_GEDDES.Items_por_factura.indx_items_factura_factura_numero
+drop index LOS_GEDDES.Items_por_factura.indx_items_factura_id_autoparte 
+drop index LOS_GEDDES.Items_por_compra.indx_items_compra_id_autoparte_cpra
+drop index LOS_GEDDES.Facturas.indx_facturas_sucursal
+drop index LOS_GEDDES.Compras.indx_compras_sucursal
+go
