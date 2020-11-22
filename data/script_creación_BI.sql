@@ -40,6 +40,11 @@ IF OBJECT_ID('LOS_GEDDES.Maxima_cantidad_stock_por_sucursal', 'V') IS NOT NULL
 IF OBJECT_ID('LOS_GEDDES.Precio_promedio_autopartes', 'V') IS NOT NULL
 	DROP VIEW LOS_GEDDES.Precio_promedio_autopartes
 
+IF OBJECT_ID('LOS_GEDDES.instante_actual_en_meses') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.instante_actual_en_meses
+
+IF OBJECT_ID('LOS_GEDDES.instante_en_meses') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.instante_en_meses
 
 --Creacion de dimensiones
 CREATE TABLE LOS_GEDDES.Bi_Instantes(
@@ -190,39 +195,39 @@ CREATE FUNCTION LOS_GEDDES.instante_actual_en_meses() returns bigint AS
 	END;
 go
 
-create function LOS_GEDDES.calcular_stock(@instante bigint,	@autoparte bigint, @sucursal bigint)
+create function LOS_GEDDES.calcular_stock(@instante bigint,    @autoparte bigint, @sucursal bigint)
 returns bigint AS
-	BEGIN
-		DECLARE @anio bigint,@mes bigint;
+    BEGIN
+        DECLARE @anio bigint,@mes bigint;
 
-		select top 1 @anio = inst_anio, @mes = inst_mes from LOS_GEDDES.Bi_Instantes where inst_id = @instante;
-		
-		return ISNULL(	(
-			select sum(	ISNULL(ic2.ipco_cantidad,0)	)
-				from LOS_GEDDES.Compras c1 
-				JOIN LOS_GEDDES.Items_por_compra ic2 ON
-					ic2.ipco_id_autoparte = @autoparte
-					and c1.cpra_numero = ic2.ipco_id_compra
-				where c1.cpra_sucursal = @sucursal and (
-						YEAR(c1.cpra_fecha)< @anio
-						or
-						(YEAR(c1.cpra_fecha) = @anio and MONTH(c1.cpra_fecha) < @mes)
-				)
-									
-			) -	(
-			select sum(	ISNULL(i2.ipfa_cantidad,0)	)
-				from LOS_GEDDES.Facturas f2 
-				JOIN LOS_GEDDES.Items_por_factura i2 ON
-					i2.ipfa_factura_numero = f2.fact_numero				
-				where i2.ipfa_id_autoparte = @autoparte
-					and f2.fact_sucursal = @sucursal
+        select top 1 @anio = inst_anio, @mes = inst_mes from LOS_GEDDES.Bi_Instantes where inst_id = @instante;
+
+        return (
+            select ISNULL(sum(ipco_cantidad),0)
+                from LOS_GEDDES.Compras
+                JOIN LOS_GEDDES.Items_por_compra ON
+                    cpra_numero = ipco_id_compra
+                where cpra_sucursal = @sucursal
+					and ipco_id_autoparte = @autoparte
 					and (
-						YEAR(f2.fact_fecha)< @anio
+                        YEAR(cpra_fecha)< @anio
+                        or
+                        (YEAR(cpra_fecha) = @anio and MONTH(cpra_fecha) < @mes)
+					)
+            ) - (
+			select ISNULL(sum(ipfa_cantidad),0)
+				from LOS_GEDDES.Facturas 
+				JOIN LOS_GEDDES.Items_por_factura ON
+					ipfa_factura_numero = fact_numero
+				where ipfa_id_autoparte = @autoparte
+					and fact_sucursal = @sucursal
+					and (
+						YEAR(fact_fecha)< @anio
 						or
-						(YEAR(f2.fact_fecha) = @anio and MONTH(f2.fact_fecha) < @mes)
+						(YEAR(fact_fecha) = @anio and MONTH(fact_fecha) < @mes)
 				)
-		),0);
-	END
+		);
+    END
 go
 
 --Creacion de vistas
@@ -273,14 +278,14 @@ CREATE VIEW LOS_GEDDES.ganancias_mensuales_automoviles AS
 		from LOS_GEDDES.Bi_Operaciones_automoviles ventas
 		join LOS_GEDDES.Bi_Operaciones_automoviles compras
 			on compras.opau_auto=ventas.opau_auto
-			and compras.opau_tipo_operacion='c'
 		join LOS_GEDDES.Bi_Instantes
 			on inst_id=ventas.opau_instante
 		join LOS_GEDDES.Sucursales
 			on sucu_id=ventas.opau_sucursal
 		join LOS_GEDDES.Ciudades
 			on ciud_id=sucu_ciudad
-		where ventas.opau_tipo_operacion='v'
+		where compras.opau_tipo_operacion='c'
+		and ventas.opau_tipo_operacion='v'
 		group by inst_anio, inst_mes, sucu_id, ciud_nombre, sucu_direccion
 );
 go
@@ -386,9 +391,10 @@ insert into #Operaciones
 
 print '
 >> Instantes de tiempo'
-insert into LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)(
+insert into LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)
 	select distinct mes, anio from #operaciones
-);
+		order by anio, mes
+;
 
 print '
 >> estadisticas clientes'
@@ -430,42 +436,31 @@ insert into LOS_GEDDES.Bi_Operaciones_autopartes
 (opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
 , opap_cant_vendida  , opap_stock)
 (
-	select inst_id
-	, sucursal
-	, autoparte
-	, null as rubro
-	, null as fabricante
-	, sum(iif(compra is not null, cantidad, 0)) as cantidad_comprada
-	, costo_unitario 
-	, precio_venta
-	, sum(iif(venta  is not null, cantidad, 0)) as cant_vendida
-	, null as stock
+	select inst_id, sucursal, autoparte, null as rubro, null as fabricante
+	, isnull(sum(cantidad_comprada), 0) as cantidad_comprada
+	, max(costo_unitario), max(precio_venta)
+	, isnull(sum(cantidad_vendida), 0) as cant_vendida, null as stock
 
 		from (
-				select compra, venta, precio_total, anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad, ipco_precio as costo_unitario, 0 as precio_venta
+				select anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad_comprada, 0 as cantidad_vendida, ipco_precio as costo_unitario, 0 as precio_venta
 					from #Operaciones
 					join LOS_GEDDES.Items_por_compra
 						on ipco_id_compra=compra
-					where 
-						compra is not null
-						and modelo is null
 					
 				union all
 
-				select compra, venta, precio_total, anio, mes, sucursal, ipfa_id_autoparte as autoparte, ipfa_cantidad as cantidad,0 as costo_unitario, ipfa_precio_facturado as precio_venta
+				select anio, mes, sucursal, ipfa_id_autoparte as autoparte, 0 as cantidad_comprada, ipfa_cantidad as cantidad_vendida,0 as costo_unitario, ipfa_precio_facturado as precio_venta
 					from #Operaciones
 					join LOS_GEDDES.Items_por_factura
 						on ipfa_factura_numero=venta
-					where 
-						compra is null 
-						and modelo is null
+					
 		) as Operaciones_autopartes
 
 		join LOS_GEDDES.Bi_Instantes
 			on inst_anio=anio
 			and inst_mes=mes
 
-		group by inst_id, sucursal, autoparte, precio_venta, costo_unitario
+		group by inst_id, sucursal, autoparte
 );
 go
 print'
@@ -491,8 +486,6 @@ drop function LOS_GEDDES.edad_en_el_anio
 drop function LOS_GEDDES.rango_edad
 drop function LOS_GEDDES.rg_edad_en_el_anio
 drop function LOS_GEDDES.rango_potencia
-drop function LOS_GEDDES.instante_en_meses
-drop function LOS_GEDDES.instante_actual_en_meses
 drop function LOS_GEDDES.calcular_stock
 drop index LOS_GEDDES.Items_por_factura.indx_items_factura_factura_numero
 drop index LOS_GEDDES.Items_por_factura.indx_items_factura_id_autoparte 
