@@ -97,11 +97,14 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_automoviles(
   opau_sucursal_venta  bigint,
   opau_precio_venta    decimal(18,2),
   
-
-  Constraint pk_opau	  PRIMARY KEY(opau_id         ),
---  Constraint fk_opau_inst FOREIGN KEY(opau_instante   ) REFERENCES  LOS_GEDDES.Bi_Instantes(inst_id),
- -- Constraint fk_opau_sucu FOREIGN KEY(opau_sucursal	  ) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
- -- Constraint fk_opau_rgpo FOREIGN KEY(opau_rg_potencia) REFERENCES LOS_GEDDES.Bi_Rangos_potencias(rgpo_id)   
+  Constraint pk_opau		   PRIMARY KEY(opau_id),
+  Constraint fk_opau_auto	   FOREIGN KEY(opau_auto		   ) REFERENCES LOS_GEDDES.Automoviles(auto_id),
+  Constraint fk_opau_modelo	   FOREIGN KEY(opau_modelo		   ) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
+  Constraint fk_opau_rgpo	   FOREIGN KEY(opau_rg_potencia	   ) REFERENCES LOS_GEDDES.Bi_Rangos_potencias(rgpo_id),   
+  Constraint fk_opau_cpra_inst FOREIGN KEY(opau_instante_compra) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
+  Constraint fk_opau_cpra_sucu FOREIGN KEY(opau_sucursal_compra) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
+  Constraint fk_opau_vnta_inst FOREIGN KEY(opau_instante_venta ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
+  Constraint fk_opau_vnta_sucu FOREIGN KEY(opau_sucursal_venta ) REFERENCES LOS_GEDDES.Sucursales(sucu_id)
 );
 
 CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
@@ -184,7 +187,7 @@ CREATE FUNCTION LOS_GEDDES.rango_potencia(@potencia decimal(18,0)) RETURNS bigin
 END
 go
 
-CREATE FUNCTION LOS_GEDDES.instante_en_meses(@mes bigint, @anio bigint) returns bigint as
+CREATE FUNCTION LOS_GEDDES.instante_en_meses(@mes tinyint, @anio smallint) returns bigint as
 	BEGIN
 		return @mes + @anio*12
 	END
