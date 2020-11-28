@@ -515,10 +515,10 @@ BEGIN
 	print @SALTO_DE_LINEA +'>> Migracion Ventas de automoviles:'
 	EXEC LOS_GEDDES.MigracionVentasAutomoviles
 
-	print @SALTO_DE_LINEA +'>> Migracion Compras de autopartes'
+	print @SALTO_DE_LINEA +'>> Migracion Compras de autopartes:'
 	EXEC LOS_GEDDES.MigracionCompraAutopartes
 
-	print @SALTO_DE_LINEA +'>> Migracion Ventas de autopartes'
+	print @SALTO_DE_LINEA +'>> Migracion Ventas de autopartes:'
 	EXEC LOS_GEDDES.MigracionVentaAutopartes	
 
 END
