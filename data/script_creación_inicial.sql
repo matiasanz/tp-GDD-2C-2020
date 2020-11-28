@@ -466,6 +466,9 @@ BEGIN
 END
 GO
 
+CREATE INDEX [IX_Maestra_TIPO_AUTO_CODIGO] ON [GD2C2020].[gd_esquema].[Maestra] ([TIPO_AUTO_CODIGO]) INCLUDE ([TIPO_AUTO_DESC])
+GO
+
 CREATE PROCEDURE LOS_GEDDES.MigracionTablasConcesionaria AS
 BEGIN
 	print '*************************** Inicio migracion de datos ****************************'
@@ -613,4 +616,5 @@ DROP PROCEDURE LOS_GEDDES.MigracionModelosAutomoviles
 DROP PROCEDURE LOS_GEDDES.MigracionSucursales
 DROP PROCEDURE LOS_GEDDES.MigracionTipoAutomoviles
 DROP PROCEDURE LOS_GEDDES.MigracionTipoComponentes
+DROP INDEX [gd_esquema].[Maestra].[IX_Maestra_TIPO_AUTO_CODIGO]
 GO

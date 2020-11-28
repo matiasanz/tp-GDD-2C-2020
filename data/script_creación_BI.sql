@@ -129,9 +129,11 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
  );
 go
 
---Creacion de indices
 CREATE INDEX indx_items_factura_factura_numero
 	ON LOS_GEDDES.Items_por_factura(ipfa_factura_numero)
+
+CREATE INDEX indx_bi_operaciones_automoviles_opau_id 
+	ON [LOS_GEDDES].[Bi_Operaciones_automoviles] ([opau_auto]) INCLUDE ([opau_id])
 
 CREATE INDEX indx_items_factura_id_autoparte
 	ON LOS_GEDDES.Items_por_factura(ipfa_id_autoparte)
@@ -522,8 +524,6 @@ BEGIN
 	print @SALTO_DE_LINEA +'>> Migracion Ventas de autopartes'
 	EXEC LOS_GEDDES.MigracionVentaAutopartes	
 
-	DROP TABLE #operaciones
-
 END
 GO
 
@@ -540,6 +540,7 @@ DROP INDEX LOS_GEDDES.Items_por_factura.indx_items_factura_factura_numero
 DROP INDEX LOS_GEDDES.Items_por_factura.indx_items_factura_id_autoparte 
 DROP INDEX LOS_GEDDES.Items_por_compra.indx_items_compra_id_autoparte_cpra
 DROP INDEX LOS_GEDDES.Facturas.indx_facturas_sucursal
+DROP INDEX LOS_GEDDES.BI_Operaciones_automoviles.indx_bi_operaciones_automoviles_opau_id
 DROP INDEX LOS_GEDDES.Compras.indx_compras_sucursal
 DROP PROCEDURE LOS_GEDDES.CrearRangosDePotencia
 DROP PROCEDURE LOS_GEDDES.CrearRangosEdades
