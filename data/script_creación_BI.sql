@@ -49,23 +49,23 @@ IF OBJECT_ID('LOS_GEDDES.instante_en_meses') IS NOT NULL
 --Creacion de dimensiones
 CREATE TABLE LOS_GEDDES.Bi_Instantes(
   inst_id	bigint IDENTITY(1,1),
-  inst_mes  tinyint,
-  inst_anio smallint
+  inst_mes  tinyint NOT NULL,
+  inst_anio smallint NOT NULL
 
   Constraint pk_instantes PRIMARY KEY(inst_id)
 );
 
 CREATE TABLE LOS_GEDDES.Bi_rangos_potencias(
   rgpo_id  bigint,
-  rgpo_min decimal(18,0),
-  rgpo_max decimal(18,0)
+  rgpo_min decimal(18,0) NOT NULL,
+  rgpo_max decimal(18,0)  
 
   Constraint pk_rgpo PRIMARY KEY(rgpo_id)
 );
 
 CREATE TABLE LOS_GEDDES.Bi_rangos_edades(
   rged_id  bigint,
-  rged_min smallint,
+  rged_min smallint NOT NULL,
   rged_max smallint
 
   Constraint pk_rged PRIMARY KEY(rged_id)
@@ -73,11 +73,11 @@ CREATE TABLE LOS_GEDDES.Bi_rangos_edades(
 --Creacion de tablas de hechos
 CREATE TABLE LOS_GEDDES.Bi_Estadisticas_clientes(
   ecli_id		bigint IDENTITY(1,1),
-  ecli_instante bigint,
-  ecli_sucursal bigint,
+  ecli_instante bigint NOT NULL,
+  ecli_sucursal bigint NOT NULL,
   ecli_sexo		char(1),
-  ecli_rg_edad	bigint,
-  ecli_cantidad bigint,
+  ecli_rg_edad	bigint NOT NULL,
+  ecli_cantidad bigint NOT NULL,
 
   Constraint pk_estad_clientes PRIMARY KEY(ecli_id     ),
   Constraint fk_ecli_inst	   FOREIGN KEY(ecli_instante) REFERENCES  LOS_GEDDES.Bi_Instantes(inst_id),
@@ -87,15 +87,15 @@ CREATE TABLE LOS_GEDDES.Bi_Estadisticas_clientes(
 
 CREATE TABLE LOS_GEDDES.Bi_Operaciones_automoviles(
   opau_id			   bigint IDENTITY(1,1),
-  opau_auto			   bigint,
-  opau_modelo		   decimal(18,0),
-  opau_rg_potencia	   bigint,
-  opau_instante_compra bigint,
-  opau_sucursal_compra bigint,
-  opau_precio_compra   decimal(18,2),
+  opau_auto			   bigint NOT NULL,
+  opau_modelo		   decimal(18,0)NOT NULL,
+  opau_rg_potencia	   bigint NOT NULL,
+  opau_instante_compra bigint NOT NULL,
+  opau_sucursal_compra bigint NOT NULL,
+  opau_precio_compra   decimal(18,2) NOT NULL,
   opau_instante_venta  bigint,
-  opau_sucursal_venta  bigint,
-  opau_precio_venta    decimal(18,2),
+  opau_sucursal_venta  bigint ,
+  opau_precio_venta    decimal(18,2), 
   
   Constraint pk_opau		   PRIMARY KEY(opau_id),
   Constraint fk_opau_auto	   FOREIGN KEY(opau_auto		   ) REFERENCES LOS_GEDDES.Automoviles(auto_id),
@@ -109,16 +109,16 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_automoviles(
 
 CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
   opap_id			  bigint IDENTITY(1,1),
-  opap_instante		  bigint,
-  opap_sucursal		  bigint,
-  opap_autoparte	  decimal(18,0),
+  opap_instante		  bigint NOT NULL,
+  opap_sucursal		  bigint NOT NULL,
+  opap_autoparte	  decimal(18,0) NOT NULL,
   opap_rubro	      bigint,
-  opap_fabricante	  bigint,
-  opap_cant_comprada  decimal(18,0),
-  opap_costo_unitario decimal(18,2),
-  opap_cant_vendida   decimal(18,0),
-  opap_precio_venta   decimal(18,2),
-  opap_stock		  bigint
+  opap_fabricante	  bigint NOT NULL,
+  opap_cant_comprada  decimal(18,0) NOT NULL,
+  opap_costo_unitario decimal(18,2) NOT NULL,
+  opap_cant_vendida   decimal(18,0) NOT NULL,
+  opap_precio_venta   decimal(18,2) NOT NULL,
+  opap_stock		  bigint 
 
   Constraint pk_opap	  PRIMARY KEY(opap_id        ),
   Constraint fk_opap_inst FOREIGN KEY(opap_instante  ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
@@ -157,7 +157,7 @@ go
 
 CREATE FUNCTION LOS_GEDDES.rango_edad(@edad bigint) RETURNS bigint AS 
 	BEGIN
-		DECLARE @rg_edad_18_30   bigint = 1 --CUANDO hagamos procedure, se lo pasamos como argumento
+		DECLARE @rg_edad_18_30   bigint = 1 
 		DECLARE @rg_edad_31_50   bigint = 2 
 		DECLARE @rg_edad_mayor50 bigint = 3 
 
