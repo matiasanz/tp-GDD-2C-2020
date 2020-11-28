@@ -336,7 +336,7 @@ CREATE VIEW LOS_GEDDES.ganancias_mensuales_autopartes AS
 go
 
 CREATE VIEW LOS_GEDDES.Maxima_cantidad_stock_por_sucursal as
-	Select opap_sucursal as Sucursal, inst_anio as Año, max(stock_instantaneo) as Maximo_stock  
+	Select opap_sucursal as Sucursal, inst_anio as Anio, max(stock_instantaneo) as Maximo_stock  
 		from (
 			Select opap_instante, opap_sucursal, sum(opap_stock) as stock_instantaneo
 				from LOS_GEDDES.Bi_Operaciones_autopartes
@@ -347,61 +347,38 @@ CREATE VIEW LOS_GEDDES.Maxima_cantidad_stock_por_sucursal as
 		group by opap_sucursal, inst_anio
 go
 
---Migracion del modelo
-print '>> Rangos potencias'
-INSERT INTO LOS_GEDDES.Bi_rangos_potencias(rgpo_id, rgpo_min, rgpo_max)
-	Values (1, 50,150), (2, 151, 300), (3, 301, null)
-;
+CREATE PROCEDURE LOS_GEDDES.CrearRangosDePotencia AS
+BEGIN
+	INSERT INTO LOS_GEDDES.Bi_rangos_potencias(rgpo_id, rgpo_min, rgpo_max)
+		Values (1, 50,150), (2, 151, 300), (3, 301, null);
+END
+GO
 
-print '
->> Rangos edades'
-INSERT INTO LOS_GEDDES.Bi_rangos_edades(rged_id, rged_min, rged_max)
-	Values (0, 0, 17), (1, 18, 30), (2, 31, 50), (3, 51, null)
-;
-go
+CREATE PROCEDURE LOS_GEDDES.CrearRangosEdades AS
+BEGIN
+	INSERT INTO LOS_GEDDES.Bi_rangos_edades(rged_id, rged_min, rged_max)
+		Values (0, 0, 17), (1, 18, 30), (2, 31, 50), (3, 51, null);
+END
+GO
 
-CREATE TABLE #operaciones(
-	compra		 decimal(18,0),
-	venta		 decimal(18,0),
-	sucursal	 bigint,
-	anio		 bigint,
-	mes			 bigint,
-	cliente		 bigint,
-	automovil	 bigint,
-	modelo		 decimal(18,0),
-	precio_total decimal(18,2),
-)
-
-print '
->> tabla temporal de Operaciones de compraventa'
-INSERT INTO #Operaciones
-(compra, venta, sucursal, anio, mes, cliente, automovil, modelo, precio_total)
-( 
-	Select cpra_numero, null, cpra_sucursal, year(cpra_fecha), MONTH(cpra_fecha), cpra_cliente, auto_id, auto_modelo, cpra_precio_total
-		from LOS_GEDDES.Compras
-		left join LOS_GEDDES.Automoviles
-			on auto_id=cpra_automovil
-
-	UNION ALL
-
-	Select null, fact_numero, fact_sucursal, year(fact_fecha), MONTH(fact_fecha), fact_cliente, auto_id, auto_modelo, fact_precio 
-		from LOS_GEDDES.Facturas
-		left join LOS_GEDDES.Automoviles
-			on auto_id=fact_automovil
-);
-
-print '
->> Instantes de tiempo'
-INSERT INTO LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)
+-- Migracion de Datos
+-- Instantes de tiempo
+CREATE PROCEDURE LOS_GEDDES.MigracionInstantes AS
+BEGIN
+	
+	INSERT INTO LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)
 	Select distinct mes, anio from #operaciones
-		order by anio, mes
-;
+		order by anio, mes;
+END
+GO
 
-print '
->> estadisticas clientes'
-INSERT INTO LOS_GEDDES.Bi_Estadisticas_clientes
-(ecli_instante, ecli_sucursal, ecli_sexo, ecli_rg_edad, ecli_cantidad)
-(
+-- Estadisticas de Clientes
+CREATE PROCEDURE LOS_GEDDES.MigracionClientes AS
+BEGIN
+
+	INSERT INTO LOS_GEDDES.Bi_Estadisticas_clientes
+	(ecli_instante, ecli_sucursal, ecli_sexo, ecli_rg_edad, ecli_cantidad)
+	(
 	Select distinct inst_id, sucursal, clie_sexo, rg_edad, count(*)
 		from (
 			Select *, LOS_GEDDES.rg_edad_en_el_anio(clie_fecha_nac, anio) as rg_edad 
@@ -415,89 +392,145 @@ INSERT INTO LOS_GEDDES.Bi_Estadisticas_clientes
 			and inst_anio=anio
 		group by sucursal, inst_id, rg_edad, clie_sexo
 );
+END
+GO
 
-print '
->> operaciones de automoviles
+-- Compras de Automoviles
+CREATE PROCEDURE LOS_GEDDES.MigracionComprasAutomoviles AS
+BEGIN
+	 INSERT INTO LOS_GEDDES.Bi_Operaciones_automoviles
+	 (opau_auto, opau_modelo, opau_rg_potencia, opau_instante_compra, opau_sucursal_compra, opau_precio_compra)
+	 (
+		Select automovil, modelo, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total from #operaciones
+			join LOS_GEDDES.Bi_instantes
+					on inst_anio=anio
+					and inst_mes=mes
+			join LOS_GEDDES.Modelos_automoviles
+				on mode_codigo=modelo
+			where modelo is not null		
+	 );
+ END
+GO
 
-	* Compras'
- INSERT INTO LOS_GEDDES.Bi_Operaciones_automoviles
- (opau_auto, opau_modelo, opau_rg_potencia, opau_instante_compra, opau_sucursal_compra, opau_precio_compra)
- (
-	Select automovil, modelo, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total from #operaciones
-		join LOS_GEDDES.Bi_instantes
+-- Ventas de Automoviles
+CREATE PROCEDURE LOS_GEDDES.MigracionVentasAutomoviles AS
+BEGIN
+
+	 UPDATE LOS_GEDDES.Bi_Operaciones_automoviles
+		set opau_instante_venta=inst_id,
+			opau_sucursal_venta=sucursal,
+			opau_precio_venta=precio_total
+		from #operaciones
+		join LOS_GEDDES.bi_instantes on
+			inst_anio=anio
+			and inst_mes=mes
+		where venta is not null
+			and automovil=opau_auto
+END
+GO
+
+-- Compra de Autopartes
+CREATE PROCEDURE LOS_GEDDES.MigracionCompraAutopartes AS
+BEGIN
+
+	INSERT INTO LOS_GEDDES.Bi_Operaciones_autopartes
+	(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
+	, opap_cant_vendida  , opap_stock)
+	(
+		Select inst_id, o.sucursal, ipco_id_autoparte, apte_categoria as rubro, apte_fabricante as fabricante
+		, isnull(sum(ipco_cantidad), 0) as cantidad_comprada
+		, max(ipco_precio), 0 as max_precio_venta, 0 as cant_vendida, 
+		LOS_GEDDES.calcular_stock(inst_id,ipco_id_autoparte,o.sucursal) as stock
+		FROM #operaciones o
+		join LOS_GEDDES.Items_por_compra on ipco_id_compra=o.compra					
+		join LOS_GEDDES.Bi_Instantes
+				on inst_anio=o.anio
+				and inst_mes=o.mes
+		join LOS_GEDDES.Autopartes a on a.apte_codigo = ipco_id_autoparte
+			group by inst_id, o.sucursal, ipco_id_autoparte, apte_categoria, apte_fabricante)
+
+END
+GO
+
+-- Venta de Autopartes
+CREATE PROCEDURE LOS_GEDDES.MigracionVentaAutopartes AS
+BEGIN
+
+	INSERT INTO LOS_GEDDES.Bi_Operaciones_autopartes
+	(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
+	, opap_cant_vendida  , opap_stock)
+	(Select inst_id, o.sucursal, ipfa_id_autoparte, apte_categoria as rubro, apte_fabricante as fabricante
+		, 0 as cantidad_comprada
+		, SUM(ipfa_cantidad), max(ipfa_precio_facturado) as max_precio_venta
+		, isnull(sum(ipfa_cantidad), 0) as cant_vendida, 
+		LOS_GEDDES.calcular_stock(inst_id,ipfa_id_autoparte,o.sucursal) as stock
+		from #operaciones o
+						join LOS_GEDDES.Items_por_factura
+							on ipfa_factura_numero=o.venta
+		join LOS_GEDDES.Bi_Instantes
 				on inst_anio=anio
 				and inst_mes=mes
-		join LOS_GEDDES.Modelos_automoviles
-			on mode_codigo=modelo
-		where modelo is not null		
- );
-go
+		join LOS_GEDDES.Autopartes a on a.apte_codigo = ipfa_id_autoparte
+			group by inst_id, o.sucursal, ipfa_id_autoparte, apte_categoria, apte_fabricante)
 
-print '
-	* Ventas'
- UPDATE LOS_GEDDES.Bi_Operaciones_automoviles
-	set opau_instante_venta=inst_id,
-		opau_sucursal_venta=sucursal,
-		opau_precio_venta=precio_total
-	from #operaciones
-	join LOS_GEDDES.bi_instantes on
-		inst_anio=anio
-		and inst_mes=mes
-	where venta is not null
-		and automovil=opau_auto
+END
+GO
 
-print '
->> Operaciones de autopartes'
-INSERT INTO LOS_GEDDES.Bi_Operaciones_autopartes
-(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
-, opap_cant_vendida  , opap_stock)
-(
-	Select inst_id, sucursal, autoparte, null as rubro, null as fabricante
-	, isnull(sum(cantidad_comprada), 0) as cantidad_comprada
-	, max(costo_unitario), max(precio_venta)
-	, isnull(sum(cantidad_vendida), 0) as cant_vendida, null as stock
+CREATE PROCEDURE LOS_GEDDES.MigracionBI AS
+BEGIN
+	PRINT '*************************** Inicio migracion de datos BI ****************************'
+	DECLARE @SALTO_DE_LINEA char(1) = char(10)
 
-		from (
-				Select anio, mes, sucursal, ipco_id_autoparte as autoparte, ipco_cantidad as cantidad_comprada, 0 as cantidad_vendida, ipco_precio as costo_unitario, 0 as precio_venta
-					from #Operaciones
-					join LOS_GEDDES.Items_por_compra
-						on ipco_id_compra=compra
-					
-				union all
+	print '>> Creacion de tabla temporal Operaciones:'	 
+	SELECT * INTO #Operaciones FROM
+	(Select cpra_numero as compra, null AS venta, cpra_sucursal AS sucursal, year(cpra_fecha) AS anio, MONTH(cpra_fecha) AS mes, cpra_cliente AS cliente, auto_id AS automovil, auto_modelo AS modelo, 
+	cpra_precio_total AS precio_total
+		from LOS_GEDDES.Compras
+		left join LOS_GEDDES.Automoviles
+			on auto_id=cpra_automovil
 
-				Select anio, mes, sucursal, ipfa_id_autoparte as autoparte, 0 as cantidad_comprada, ipfa_cantidad as cantidad_vendida,0 as costo_unitario, ipfa_precio_facturado as precio_venta
-					from #Operaciones
-					join LOS_GEDDES.Items_por_factura
-						on ipfa_factura_numero=venta
-					
-		) as Operaciones_autopartes
+	UNION ALL
 
-		join LOS_GEDDES.Bi_Instantes
-			on inst_anio=anio
-			and inst_mes=mes
+	Select null AS compra, fact_numero AS venta, fact_sucursal AS sucursal, year(fact_fecha)AS anio, MONTH(fact_fecha)AS mes, fact_cliente AS cliente, auto_id AS automovil, auto_modelo AS modelo, 
+	fact_precio  AS precio_total
+		from LOS_GEDDES.Facturas
+		left join LOS_GEDDES.Automoviles
+			on auto_id=fact_automovil
+	) AS Operaciones
 
-		group by inst_id, sucursal, autoparte
-);
-go
-print'
-	* Fabricantes y rubros'
+	print @SALTO_DE_LINEA + '>> Migracion Rangos edades:'
+	EXEC LOS_GEDDES.CrearRangosEdades
 
-UPDATE LOS_GEDDES.Bi_Operaciones_autopartes
-	set opap_rubro = apte_categoria
-	  , opap_fabricante = apte_fabricante
-	
-	from LOS_GEDDES.Autopartes
-	where apte_codigo=opap_autoparte
-;
-go
+	print @SALTO_DE_LINEA + '>> Migracion Rangos potencias:'
+	EXEC LOS_GEDDES.CrearRangosDePotencia
 
-print '
-	* Calculo de Stock'
-UPDATE LOS_GEDDES.Bi_Operaciones_autopartes
-	set opap_stock = LOS_GEDDES.calcular_stock(opap_instante,opap_autoparte,opap_sucursal)
-go
+	print @SALTO_DE_LINEA +'>> Migracion Instantes de tiempo:'
+	EXEC LOS_GEDDES.MigracionInstantes
 
-DROP TABLE #operaciones
+	print @SALTO_DE_LINEA +'>> Migracion estadisticas clientes:'
+	EXEC LOS_GEDDES.MigracionClientes
+
+	print @SALTO_DE_LINEA +'>> Migracion Compras de automoviles:'
+	EXEC LOS_GEDDES.MigracionComprasAutomoviles
+
+	print @SALTO_DE_LINEA +'>> Migracion Ventas de automoviles:'
+	EXEC LOS_GEDDES.MigracionVentasAutomoviles
+
+	print @SALTO_DE_LINEA +'>> Migracion Compras de autopartes'
+	EXEC LOS_GEDDES.MigracionCompraAutopartes
+
+	print @SALTO_DE_LINEA +'>> Migracion Ventas de autopartes'
+	EXEC LOS_GEDDES.MigracionVentaAutopartes	
+
+	DROP TABLE #operaciones
+
+END
+GO
+
+EXEC LOS_GEDDES.MigracionBI
+GO
+
+
 DROP FUNCTION LOS_GEDDES.edad_en_el_anio
 DROP FUNCTION LOS_GEDDES.rango_edad
 DROP FUNCTION LOS_GEDDES.rg_edad_en_el_anio
@@ -508,4 +541,13 @@ DROP INDEX LOS_GEDDES.Items_por_factura.indx_items_factura_id_autoparte
 DROP INDEX LOS_GEDDES.Items_por_compra.indx_items_compra_id_autoparte_cpra
 DROP INDEX LOS_GEDDES.Facturas.indx_facturas_sucursal
 DROP INDEX LOS_GEDDES.Compras.indx_compras_sucursal
-go
+DROP PROCEDURE LOS_GEDDES.CrearRangosDePotencia
+DROP PROCEDURE LOS_GEDDES.CrearRangosEdades
+DROP PROCEDURE LOS_GEDDES.MigracionInstantes
+DROP PROCEDURE LOS_GEDDES.MigracionClientes
+DROP PROCEDURE LOS_GEDDES.MigracionComprasAutomoviles
+DROP PROCEDURE LOS_GEDDES.MigracionVentasAutomoviles
+DROP PROCEDURE LOS_GEDDES.MigracionCompraAutopartes
+DROP PROCEDURE LOS_GEDDES.MigracionVentaAutopartes 
+DROP PROCEDURE LOS_GEDDES.MigracionBI
+GO
