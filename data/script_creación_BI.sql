@@ -117,8 +117,7 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
   opap_cant_comprada  decimal(18,0) NOT NULL,
   opap_costo_unitario decimal(18,2) NOT NULL,
   opap_cant_vendida   decimal(18,0) NOT NULL,
-  opap_precio_venta   decimal(18,2) NOT NULL,
-  opap_stock		  bigint 
+  opap_precio_venta   decimal(18,2) NOT NULL
 
   Constraint pk_opap	  PRIMARY KEY(opap_id        ),
   Constraint fk_opap_inst FOREIGN KEY(opap_instante  ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
@@ -338,9 +337,9 @@ CREATE VIEW LOS_GEDDES.ganancias_mensuales_autopartes AS
 go
 
 CREATE VIEW LOS_GEDDES.Maxima_cantidad_stock_por_sucursal as
-	Select opap_sucursal as Sucursal, inst_anio as Anio, max(stock_instantaneo) as Maximo_stock  
+	Select opap_sucursal as Sucursal, inst_anio as Anio  
 		from (
-			Select opap_instante, opap_sucursal, sum(opap_stock) as stock_instantaneo
+			Select opap_instante, opap_sucursal
 				from LOS_GEDDES.Bi_Operaciones_autopartes
 				group by opap_instante, opap_sucursal
 		) as stock_mensual
@@ -437,12 +436,11 @@ BEGIN
 
 	INSERT INTO LOS_GEDDES.Bi_Operaciones_autopartes
 	(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
-	, opap_cant_vendida  , opap_stock)
+	, opap_cant_vendida)
 	(
 		Select inst_id, o.sucursal, ipco_id_autoparte, apte_categoria as rubro, apte_fabricante as fabricante
 		, isnull(sum(ipco_cantidad), 0) as cantidad_comprada
-		, max(ipco_precio), 0 as max_precio_venta, 0 as cant_vendida, 
-		LOS_GEDDES.calcular_stock(inst_id,ipco_id_autoparte,o.sucursal) as stock
+		, max(ipco_precio), 0 as max_precio_venta, 0 as cant_vendida
 		FROM #operaciones o
 		join LOS_GEDDES.Items_por_compra on ipco_id_compra=o.compra					
 		join LOS_GEDDES.Bi_Instantes
@@ -460,12 +458,11 @@ BEGIN
 
 	INSERT INTO LOS_GEDDES.Bi_Operaciones_autopartes
 	(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
-	, opap_cant_vendida  , opap_stock)
+	, opap_cant_vendida)
 	(Select inst_id, o.sucursal, ipfa_id_autoparte, apte_categoria as rubro, apte_fabricante as fabricante
 		, 0 as cantidad_comprada
 		, SUM(ipfa_cantidad), max(ipfa_precio_facturado) as max_precio_venta
-		, isnull(sum(ipfa_cantidad), 0) as cant_vendida, 
-		LOS_GEDDES.calcular_stock(inst_id,ipfa_id_autoparte,o.sucursal) as stock
+		, isnull(sum(ipfa_cantidad), 0) as cant_vendida
 		from #operaciones o
 						join LOS_GEDDES.Items_por_factura
 							on ipfa_factura_numero=o.venta
