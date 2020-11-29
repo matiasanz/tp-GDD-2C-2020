@@ -1,6 +1,9 @@
 USE [GD2C2020]
 GO
 
+IF OBJECT_ID('LOS_GEDDES.Bi_stock_autoparte') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_stock_autoparte
+
 IF OBJECT_ID('LOS_GEDDES.Bi_Estadisticas_clientes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Estadisticas_clientes
 
@@ -45,6 +48,9 @@ IF OBJECT_ID('LOS_GEDDES.instante_actual_en_meses') IS NOT NULL
 
 IF OBJECT_ID('LOS_GEDDES.instante_en_meses') IS NOT NULL
 	DROP FUNCTION LOS_GEDDES.instante_en_meses
+
+IF OBJECT_ID('LOS_GEDDES.edad_en_el_anio') IS NOT NULL
+	DROP FUNCTION LOS_GEDDES.edad_en_el_anio
 
 --Creacion de dimensiones
 CREATE TABLE LOS_GEDDES.Bi_Instantes(
@@ -127,6 +133,20 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
   Constraint fk_opap_fabr FOREIGN KEY(opap_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
  );
 go
+
+CREATE TABLE LOS_GEDDES.Bi_stock_autoparte(
+	stock_id bigint IDENTITY(1,1),
+	stock_instante bigint,
+	stock_sucursal bigint,
+	stock_autoparte decimal(18,0),
+	stock_cantidad bigint
+
+	Constraint pk_stock PRIMARY KEY (stock_id),
+	Constraint fk_stock_instante FOREIGN KEY(stock_instante) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
+	Constraint fk_stock_sucursal FOREIGN KEY(stock_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
+	Constraint fk_stock_autoparte FOREIGN KEY(stock_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo),
+)
+GO
 
 CREATE INDEX indx_items_factura_factura_numero
 	ON LOS_GEDDES.Items_por_factura(ipfa_factura_numero)
@@ -242,9 +262,9 @@ go
 --Creacion de vistas
 CREATE VIEW LOS_GEDDES.Compraventa_mensual_automoviles AS
 (
-	Select inst_anio as Anio, inst_mes as Mes, ciud_nombre as Ciudad, sucu_direccion as Sucursal, count(*) as Cantidad_comprada
+	Select inst_anio as Anio, inst_mes as Mes, ciud_nombre as Ciudad, sucu_direccion as Sucursal, count(1) as Cantidad_comprada
 		,  (
-			Select count(*)
+			Select count(1)
 				from LOS_GEDDES.Bi_Operaciones_automoviles opv
 				where opv.opau_sucursal_venta is not null
 					and opv.opau_sucursal_venta=opc.opau_sucursal_compra
@@ -337,15 +357,11 @@ CREATE VIEW LOS_GEDDES.ganancias_mensuales_autopartes AS
 go
 
 CREATE VIEW LOS_GEDDES.Maxima_cantidad_stock_por_sucursal as
-	Select opap_sucursal as Sucursal, inst_anio as Anio  
-		from (
-			Select opap_instante, opap_sucursal
-				from LOS_GEDDES.Bi_Operaciones_autopartes
-				group by opap_instante, opap_sucursal
-		) as stock_mensual
-		join LOS_GEDDES.Bi_Instantes on
-			inst_id=opap_instante
-		group by opap_sucursal, inst_anio
+	select inst_anio,sucu_ciudad,sucu_direccion,stock_autoparte,max(stock_cantidad) as maximo_stock
+	from LOS_GEDDES.Bi_stock_autoparte
+	join LOS_GEDDES.Bi_Instantes on inst_id = stock_instante
+	join LOS_GEDDES.Sucursales on sucu_id = stock_sucursal
+	group by inst_anio,sucu_ciudad,sucu_direccion,stock_autoparte
 go
 
 CREATE PROCEDURE LOS_GEDDES.CrearRangosDePotencia AS
@@ -475,6 +491,17 @@ BEGIN
 END
 GO
 
+CREATE PROCEDURE LOS_GEDDES.Stock_autopartes AS
+BEGIN
+	INSERT INTO LOS_GEDDES.Bi_stock_autoparte(stock_instante,stock_sucursal,stock_autoparte,stock_cantidad)
+	Select inst_id,sucu_id,opap_autoparte, LOS_GEDDES.calcular_stock(inst_id,opap_autoparte,sucu_id) as stock
+	From LOS_GEDDES.Bi_Operaciones_autopartes
+	join LOS_GEDDES.Bi_Instantes on inst_id = opap_instante
+	join LOS_GEDDES.Sucursales on sucu_id = opap_sucursal
+	group by inst_id,sucu_id,opap_autoparte
+END
+GO
+
 CREATE PROCEDURE LOS_GEDDES.MigracionBI AS
 BEGIN
 	PRINT '*************************** Inicio migracion de datos BI ****************************'
@@ -519,7 +546,10 @@ BEGIN
 	EXEC LOS_GEDDES.MigracionCompraAutopartes
 
 	print @SALTO_DE_LINEA +'>> Migracion Ventas de autopartes:'
-	EXEC LOS_GEDDES.MigracionVentaAutopartes	
+	EXEC LOS_GEDDES.MigracionVentaAutopartes
+
+	print @SALTO_DE_LINEA +'>> Migracion Stock de autopartes:'
+	EXEC LOS_GEDDES.Stock_autopartes	
 
 END
 GO
@@ -548,4 +578,5 @@ DROP PROCEDURE LOS_GEDDES.MigracionVentasAutomoviles
 DROP PROCEDURE LOS_GEDDES.MigracionCompraAutopartes
 DROP PROCEDURE LOS_GEDDES.MigracionVentaAutopartes 
 DROP PROCEDURE LOS_GEDDES.MigracionBI
+DROP PROCEDURE LOS_GEDDES.Stock_autopartes
 GO
