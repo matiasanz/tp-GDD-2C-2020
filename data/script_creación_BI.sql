@@ -7,11 +7,20 @@ IF OBJECT_ID('LOS_GEDDES.Bi_stock_autoparte') IS NOT NULL
 IF OBJECT_ID('LOS_GEDDES.Bi_Estadisticas_clientes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Estadisticas_clientes
 
-IF OBJECT_ID('LOS_GEDDES.Bi_Operaciones_automoviles', 'U') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Bi_Operaciones_automoviles
+IF OBJECT_ID('LOS_GEDDES.Bi_Compras_automoviles', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_Compras_automoviles
+
+IF OBJECT_ID('LOS_GEDDES.Bi_Ventas_automoviles', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_Ventas_automoviles
 
 IF OBJECT_ID('LOS_GEDDES.Bi_Operaciones_autopartes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Operaciones_autopartes
+
+IF OBJECT_ID('LOS_GEDDES.Bi_Compras_autopartes', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_Compras_autopartes
+
+IF OBJECT_ID('LOS_GEDDES.Bi_Ventas_autopartes', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_Ventas_autopartes
 
 IF OBJECT_ID('LOS_GEDDES.Bi_Instantes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Instantes
@@ -91,27 +100,80 @@ CREATE TABLE LOS_GEDDES.Bi_Estadisticas_clientes(
   Constraint fk_ecli_edad	   FOREIGN KEY(ecli_rg_edad ) REFERENCES  LOS_GEDDES.Bi_rangos_edades(rged_id)
 );
 
-CREATE TABLE LOS_GEDDES.Bi_Operaciones_automoviles(
-  opau_id			   bigint IDENTITY(1,1),
-  opau_auto			   bigint NOT NULL,
-  opau_modelo		   decimal(18,0)NOT NULL,
-  opau_rg_potencia	   bigint NOT NULL,
-  opau_instante_compra bigint NOT NULL,
-  opau_sucursal_compra bigint NOT NULL,
-  opau_precio_compra   decimal(18,2) NOT NULL,
-  opau_instante_venta  bigint,
-  opau_sucursal_venta  bigint ,
-  opau_precio_venta    decimal(18,2), 
+CREATE TABLE LOS_GEDDES.Bi_Compras_automoviles(
+  cpau_id			   bigint IDENTITY(1,1),
+  cpau_auto			   bigint NOT NULL,
+  cpau_modelo		   decimal(18,0)NOT NULL,
+  cpau_rg_potencia	   bigint NOT NULL,
+  cpau_instante		   bigint NOT NULL,
+  cpau_sucursal		   bigint NOT NULL,
+  cpau_precio		   decimal(18,2) NOT NULL
   
-  Constraint pk_opau		   PRIMARY KEY(opau_id),
-  Constraint fk_opau_auto	   FOREIGN KEY(opau_auto		   ) REFERENCES LOS_GEDDES.Automoviles(auto_id),
-  Constraint fk_opau_modelo	   FOREIGN KEY(opau_modelo		   ) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
-  Constraint fk_opau_rgpo	   FOREIGN KEY(opau_rg_potencia	   ) REFERENCES LOS_GEDDES.Bi_Rangos_potencias(rgpo_id),   
-  Constraint fk_opau_cpra_inst FOREIGN KEY(opau_instante_compra) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
-  Constraint fk_opau_cpra_sucu FOREIGN KEY(opau_sucursal_compra) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
-  Constraint fk_opau_vnta_inst FOREIGN KEY(opau_instante_venta ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
-  Constraint fk_opau_vnta_sucu FOREIGN KEY(opau_sucursal_venta ) REFERENCES LOS_GEDDES.Sucursales(sucu_id)
+  Constraint pk_opau		   PRIMARY KEY(cpau_id),
+  Constraint fk_opau_auto	   FOREIGN KEY(cpau_auto		   ) REFERENCES LOS_GEDDES.Automoviles(auto_id),
+  Constraint fk_opau_modelo	   FOREIGN KEY(cpau_modelo		   ) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
+  Constraint fk_opau_rgpo	   FOREIGN KEY(cpau_rg_potencia	   ) REFERENCES LOS_GEDDES.Bi_Rangos_potencias(rgpo_id),   
+  Constraint fk_opau_cpra_inst FOREIGN KEY(cpau_instante	   ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
+  Constraint fk_opau_cpra_sucu FOREIGN KEY(cpau_sucursal	   ) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
 );
+
+CREATE TABLE LOS_GEDDES.Bi_Ventas_automoviles(
+  vtau_id			   bigint IDENTITY(1,1),
+  vtau_auto			   bigint NOT NULL,
+  vtau_modelo		   decimal(18,0)NOT NULL,
+  vtau_rg_potencia	   bigint NOT NULL,
+  vtau_instante		   bigint,
+  vtau_sucursal		   bigint ,
+  vtau_precio		   decimal(18,2), 
+  
+  Constraint pk_vtau		   PRIMARY KEY(vtau_id),
+  Constraint fk_vtau_auto	   FOREIGN KEY(vtau_auto		   ) REFERENCES LOS_GEDDES.Automoviles(auto_id),
+  Constraint fk_vtau_modelo	   FOREIGN KEY(vtau_modelo		   ) REFERENCES LOS_GEDDES.Modelos_automoviles(mode_codigo),
+  Constraint fk_vtau_rgpo	   FOREIGN KEY(vtau_rg_potencia	   ) REFERENCES LOS_GEDDES.Bi_Rangos_potencias(rgpo_id),
+  Constraint fk_vtau_vnta_inst FOREIGN KEY(vtau_instante	   ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
+  Constraint fk_vtau_vnta_sucu FOREIGN KEY(vtau_sucursal	   ) REFERENCES LOS_GEDDES.Sucursales(sucu_id)
+
+);
+
+CREATE TABLE LOS_GEDDES.Bi_Compras_autopartes (
+  coau_id			  bigint IDENTITY(1,1),
+  coau_instante		  bigint NOT NULL,
+  coau_sucursal		  bigint NOT NULL,
+  coau_autoparte	  decimal(18,0) NOT NULL,
+  coau_rubro	      bigint,
+  coau_fabricante	  bigint NOT NULL,
+  coau_cant_comprada  decimal(18,0) NOT NULL,
+  coau_costo_unitario decimal(18,2) NOT NULL,
+  coau_stock		  decimal(18,0)
+
+  Constraint pk_coau	  PRIMARY KEY(coau_id        ),
+  Constraint fk_coau_inst FOREIGN KEY(coau_instante  ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
+  Constraint fk_coau_sucu FOREIGN KEY(coau_sucursal	 ) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
+  Constraint fk_coau_apte FOREIGN KEY(coau_autoparte ) REFERENCES LOS_GEDDES.Autopartes(apte_codigo),
+  Constraint fk_coau_cate FOREIGN KEY(coau_rubro     ) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo),   
+  Constraint fk_coau_fabr FOREIGN KEY(coau_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
+ );
+go
+
+CREATE TABLE LOS_GEDDES.Bi_Ventas_autopartes (
+  veau_id			  bigint IDENTITY(1,1),
+  veau_instante		  bigint NOT NULL,
+  veau_sucursal		  bigint NOT NULL,
+  veau_autoparte	  decimal(18,0) NOT NULL,
+  veau_rubro	      bigint,
+  veau_fabricante	  bigint NOT NULL,
+  veau_costo_unitario decimal(18,2) NOT NULL,
+  veau_cant_vendida   decimal(18,0) NOT NULL,
+  veau_precio_venta   decimal(18,2) NOT NULL
+
+  Constraint pk_veau	  PRIMARY KEY(veau_id        ),
+  Constraint fk_veau_inst FOREIGN KEY(veau_instante  ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
+  Constraint fk_veau_sucu FOREIGN KEY(veau_sucursal	 ) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
+  Constraint fk_veau_apte FOREIGN KEY(veau_autoparte ) REFERENCES LOS_GEDDES.Autopartes(apte_codigo),
+  Constraint fk_veau_cate FOREIGN KEY(veau_rubro     ) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo),   
+  Constraint fk_veau_fabr FOREIGN KEY(veau_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
+ );
+go
 
 CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
   opap_id			  bigint IDENTITY(1,1),
@@ -134,25 +196,8 @@ CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
  );
 go
 
-CREATE TABLE LOS_GEDDES.Bi_stock_autoparte(
-	stock_id bigint IDENTITY(1,1),
-	stock_instante bigint,
-	stock_sucursal bigint,
-	stock_autoparte decimal(18,0),
-	stock_cantidad bigint
-
-	Constraint pk_stock PRIMARY KEY (stock_id),
-	Constraint fk_stock_instante FOREIGN KEY(stock_instante) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
-	Constraint fk_stock_sucursal FOREIGN KEY(stock_sucursal) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
-	Constraint fk_stock_autoparte FOREIGN KEY(stock_autoparte) REFERENCES LOS_GEDDES.Autopartes(apte_codigo),
-)
-GO
-
 CREATE INDEX indx_items_factura_factura_numero
 	ON LOS_GEDDES.Items_por_factura(ipfa_factura_numero)
-
-CREATE INDEX indx_bi_operaciones_automoviles_opau_id 
-	ON [LOS_GEDDES].[Bi_Operaciones_automoviles] ([opau_auto]) INCLUDE ([opau_id])
 
 CREATE INDEX indx_items_factura_id_autoparte
 	ON LOS_GEDDES.Items_por_factura(ipfa_id_autoparte)
@@ -265,75 +310,78 @@ CREATE VIEW LOS_GEDDES.Compraventa_mensual_automoviles AS
 	Select inst_anio as Anio, inst_mes as Mes, ciud_nombre as Ciudad, sucu_direccion as Sucursal, count(1) as Cantidad_comprada
 		,  (
 			Select count(1)
-				from LOS_GEDDES.Bi_Operaciones_automoviles opv
-				where opv.opau_sucursal_venta is not null
-					and opv.opau_sucursal_venta=opc.opau_sucursal_compra
-					and opv.opau_instante_venta=opc.opau_instante_compra
+				from LOS_GEDDES.Bi_Ventas_automoviles
+					where vtau_sucursal=cpau_sucursal
+					and vtau_instante= cpau_instante
 		) as Cantidad_vendida
-		from LOS_GEDDES.Bi_Operaciones_automoviles opc
+		
+		from LOS_GEDDES.Bi_Compras_automoviles
 		join LOS_GEDDES.Bi_Instantes on
-			inst_id=opau_instante_compra
+			inst_id=cpau_instante
 		join LOS_GEDDES.Sucursales on
-			sucu_id=opau_sucursal_compra
+			sucu_id=cpau_sucursal
 		join LOS_GEDDES.Ciudades on
 			ciud_id=sucu_ciudad
-		group by inst_anio, inst_mes, ciud_nombre, sucu_direccion, opau_sucursal_compra, opau_instante_compra
+		group by inst_anio, inst_mes, ciud_nombre, sucu_direccion, cpau_sucursal, cpau_instante
 );
 go
+
 
 CREATE VIEW LOS_GEDDES.Precio_promedio_automoviles AS
 (
 	Select inst_anio as Anio, inst_mes as Mes, ciud_nombre as Ciudad, sucu_direccion as Sucursal
-		, cast(avg(opau_precio_compra) as decimal(18,2)) as Precio_promedio_compra
+		, cast(avg(cpau_precio) as decimal(18,2)) as Precio_promedio_compra
 		, (
-			Select cast(avg(ov.opau_precio_venta) as decimal(18,2))
-				from LOS_GEDDES.Bi_Operaciones_automoviles ov
-				where ov.opau_instante_venta is not null
-					and ov.opau_instante_venta=oc.opau_instante_compra
-					and ov.opau_sucursal_venta=oc.opau_sucursal_compra
+			Select cast(avg(vtau_precio) as decimal(18,2))
+				from LOS_GEDDES.Bi_Ventas_automoviles
+				where vtau_instante=cpau_instante
+					and vtau_instante=cpau_instante
 		) as promedio_precio_venta
-		from LOS_GEDDES.Bi_Operaciones_automoviles oc
+		from LOS_GEDDES.Bi_Compras_automoviles
 		join LOS_GEDDES.Bi_Instantes on
-			inst_id=opau_instante_compra
+			inst_id=cpau_instante
 		join LOS_GEDDES.Sucursales
-			on sucu_id=opau_sucursal_compra
+			on sucu_id=cpau_sucursal
 		join LOS_GEDDES.Ciudades
 			on ciud_id=sucu_ciudad
-		group by inst_anio, inst_mes, opau_sucursal_compra, opau_instante_compra, ciud_nombre, sucu_direccion
+		group by inst_anio, inst_mes, cpau_sucursal, cpau_instante, ciud_nombre, sucu_direccion
 );
 go
 
 CREATE VIEW LOS_GEDDES.Ganancias_mensuales_automoviles AS
 (
-	Select inst_anio as Anio, inst_mes as Mes, ciud_nombre as Ciudad, sucu_direccion as Sucursal, sum(opau_precio_venta-opau_precio_compra) as Ganancia
-		from LOS_GEDDES.Bi_Operaciones_automoviles
+	Select inst_anio as Anio, inst_mes as Mes, ciud_nombre as Ciudad, sucu_direccion as Sucursal, sum(vtau_precio-cpau_precio) as Ganancia
+		from LOS_GEDDES.Bi_Ventas_automoviles
+		join LOS_GEDDES.Bi_Compras_automoviles on
+			cpau_id=vtau_id
 		join LOS_GEDDES.Bi_Instantes on
-			inst_id=opau_instante_venta
+			inst_id=vtau_instante
 		join LOS_GEDDES.Sucursales on
-			sucu_id=opau_sucursal_venta
+			sucu_id=vtau_sucursal
 		join LOS_GEDDES.Ciudades on
 			ciud_id=sucu_ciudad
-		where opau_instante_venta is not null
 		group by inst_anio, inst_mes, sucu_direccion, ciud_nombre
 );
 go
 
 CREATE VIEW LOS_GEDDES.Tiempo_promedio_en_stock_automoviles AS
 (
-	Select opau_modelo as Modelo, (
-			avg(iif(opau_instante_venta is null
+	Select cpau_modelo as Modelo, (
+			avg(iif(vtau_instante is null
 					, LOS_GEDDES.instante_actual_en_meses()
 					, LOS_GEDDES.instante_en_meses(fecha_venta.inst_mes, fecha_venta.inst_anio)
 				) - LOS_GEDDES.instante_en_meses(fecha_compra.inst_mes, fecha_compra.inst_anio)
 			)
 		) as promedio_en_stock
 
-		from LOS_GEDDES.Bi_Operaciones_automoviles
+		from LOS_GEDDES.Bi_Compras_automoviles
 		join LOS_GEDDES.bi_instantes fecha_compra on
-			fecha_compra.inst_id=opau_instante_compra
+			fecha_compra.inst_id=cpau_instante
+		left join LOS_GEDDES.Bi_Ventas_automoviles on
+			vtau_auto=cpau_auto
 		left join LOS_GEDDES.bi_instantes fecha_venta on
-			fecha_venta.inst_id=opau_instante_venta
-		group by opau_modelo 
+			fecha_venta.inst_id=vtau_instante
+		group by cpau_modelo 
 );
 go
 
@@ -357,11 +405,11 @@ CREATE VIEW LOS_GEDDES.ganancias_mensuales_autopartes AS
 go
 
 CREATE VIEW LOS_GEDDES.Maxima_cantidad_stock_por_sucursal as
-	select inst_anio,sucu_ciudad,sucu_direccion,stock_autoparte,max(stock_cantidad) as maximo_stock
-	from LOS_GEDDES.Bi_stock_autoparte
-	join LOS_GEDDES.Bi_Instantes on inst_id = stock_instante
-	join LOS_GEDDES.Sucursales on sucu_id = stock_sucursal
-	group by inst_anio,sucu_ciudad,sucu_direccion,stock_autoparte
+	select inst_anio,sucu_ciudad,sucu_direccion, coau_autoparte, max(coau_stock) as maximo_stock
+		from LOS_GEDDES.Bi_Compras_autopartes
+		join LOS_GEDDES.Bi_Instantes on inst_id = coau_instante
+		join LOS_GEDDES.Sucursales on sucu_id = coau_sucursal
+		group by inst_anio,sucu_ciudad,sucu_direccion,coau_autoparte
 go
 
 CREATE PROCEDURE LOS_GEDDES.CrearRangosDePotencia AS
@@ -385,7 +433,7 @@ BEGIN
 	
 	INSERT INTO LOS_GEDDES.Bi_Instantes(inst_mes, inst_anio)
 	Select distinct mes, anio from #operaciones
-		order by anio, mes;
+		order by anio, mes
 END
 GO
 
@@ -415,8 +463,8 @@ GO
 -- Compras de Automoviles
 CREATE PROCEDURE LOS_GEDDES.MigracionComprasAutomoviles AS
 BEGIN
-	 INSERT INTO LOS_GEDDES.Bi_Operaciones_automoviles
-	 (opau_auto, opau_modelo, opau_rg_potencia, opau_instante_compra, opau_sucursal_compra, opau_precio_compra)
+	 INSERT INTO LOS_GEDDES.Bi_Compras_automoviles
+	 (cpau_auto, cpau_modelo, cpau_rg_potencia, cpau_instante, cpau_sucursal, cpau_precio)
 	 (
 		Select automovil, modelo, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total from #operaciones
 			join LOS_GEDDES.Bi_instantes
@@ -433,16 +481,19 @@ GO
 CREATE PROCEDURE LOS_GEDDES.MigracionVentasAutomoviles AS
 BEGIN
 
-	 UPDATE LOS_GEDDES.Bi_Operaciones_automoviles
-		set opau_instante_venta=inst_id,
-			opau_sucursal_venta=sucursal,
-			opau_precio_venta=precio_total
-		from #operaciones
-		join LOS_GEDDES.bi_instantes on
-			inst_anio=anio
-			and inst_mes=mes
-		where venta is not null
-			and automovil=opau_auto
+	INSERT INTO LOS_GEDDES.Bi_Ventas_automoviles
+	 (vtau_auto, vtau_modelo, vtau_rg_potencia, vtau_instante, vtau_sucursal, vtau_precio)
+	 (
+		select automovil, modelo, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total 
+			from #operaciones
+			join LOS_GEDDES.Bi_instantes
+					on inst_anio=anio
+					and inst_mes=mes
+			join LOS_GEDDES.Modelos_automoviles
+				on mode_codigo=modelo
+			where venta is not null
+				and modelo is not null		
+	 );
 END
 GO
 
@@ -493,12 +544,8 @@ GO
 
 CREATE PROCEDURE LOS_GEDDES.Stock_autopartes AS
 BEGIN
-	INSERT INTO LOS_GEDDES.Bi_stock_autoparte(stock_instante,stock_sucursal,stock_autoparte,stock_cantidad)
-	Select inst_id,sucu_id,opap_autoparte, LOS_GEDDES.calcular_stock(inst_id,opap_autoparte,sucu_id) as stock
-	From LOS_GEDDES.Bi_Operaciones_autopartes
-	join LOS_GEDDES.Bi_Instantes on inst_id = opap_instante
-	join LOS_GEDDES.Sucursales on sucu_id = opap_sucursal
-	group by inst_id,sucu_id,opap_autoparte
+	UPDATE LOS_GEDDES.Bi_Compras_autopartes
+		SET coau_stock = LOS_GEDDES.calcular_stock(coau_instante,coau_autoparte,coau_sucursal)
 END
 GO
 
@@ -548,7 +595,7 @@ BEGIN
 	print @SALTO_DE_LINEA +'>> Migracion Ventas de autopartes:'
 	EXEC LOS_GEDDES.MigracionVentaAutopartes
 
-	print @SALTO_DE_LINEA +'>> Migracion Stock de autopartes:'
+	print @SALTO_DE_LINEA +'>> Migracion Stock de autopartes: -> TO-DO'
 	EXEC LOS_GEDDES.Stock_autopartes	
 
 END
@@ -556,7 +603,6 @@ GO
 
 EXEC LOS_GEDDES.MigracionBI
 GO
-
 
 DROP FUNCTION LOS_GEDDES.edad_en_el_anio
 DROP FUNCTION LOS_GEDDES.rango_edad
@@ -567,7 +613,6 @@ DROP INDEX LOS_GEDDES.Items_por_factura.indx_items_factura_factura_numero
 DROP INDEX LOS_GEDDES.Items_por_factura.indx_items_factura_id_autoparte 
 DROP INDEX LOS_GEDDES.Items_por_compra.indx_items_compra_id_autoparte_cpra
 DROP INDEX LOS_GEDDES.Facturas.indx_facturas_sucursal
-DROP INDEX LOS_GEDDES.BI_Operaciones_automoviles.indx_bi_operaciones_automoviles_opau_id
 DROP INDEX LOS_GEDDES.Compras.indx_compras_sucursal
 DROP PROCEDURE LOS_GEDDES.CrearRangosDePotencia
 DROP PROCEDURE LOS_GEDDES.CrearRangosEdades
