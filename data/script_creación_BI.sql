@@ -13,14 +13,20 @@ IF OBJECT_ID('LOS_GEDDES.Bi_Compras_automoviles', 'U') IS NOT NULL
 IF OBJECT_ID('LOS_GEDDES.Bi_Ventas_automoviles', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Ventas_automoviles
 
-IF OBJECT_ID('LOS_GEDDES.Bi_Operaciones_autopartes', 'U') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Bi_Operaciones_autopartes
+IF OBJECT_ID('LOS_GEDDES.Bi_Compras_autopartes', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_Compras_autopartes
+
+IF OBJECT_ID('LOS_GEDDES.Bi_Ventas_autopartes', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_Ventas_autopartes
 
 IF OBJECT_ID('LOS_GEDDES.Bi_Compras_autopartes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Compras_autopartes
 
 IF OBJECT_ID('LOS_GEDDES.Bi_Ventas_autopartes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Ventas_autopartes
+
+IF OBJECT_ID('LOS_GEDDES.Bi_operaciones_autopartes', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_operaciones_autopartes
 
 IF OBJECT_ID('LOS_GEDDES.Bi_Instantes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Instantes
@@ -172,27 +178,6 @@ CREATE TABLE LOS_GEDDES.Bi_Ventas_autopartes (
   Constraint fk_veau_apte FOREIGN KEY(veau_autoparte ) REFERENCES LOS_GEDDES.Autopartes(apte_codigo),
   Constraint fk_veau_cate FOREIGN KEY(veau_rubro     ) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo),   
   Constraint fk_veau_fabr FOREIGN KEY(veau_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
- );
-go
-
-CREATE TABLE LOS_GEDDES.Bi_Operaciones_autopartes (
-  opap_id			  bigint IDENTITY(1,1),
-  opap_instante		  bigint NOT NULL,
-  opap_sucursal		  bigint NOT NULL,
-  opap_autoparte	  decimal(18,0) NOT NULL,
-  opap_rubro	      bigint,
-  opap_fabricante	  bigint NOT NULL,
-  opap_cant_comprada  decimal(18,0) NOT NULL,
-  opap_costo_unitario decimal(18,2) NOT NULL,
-  opap_cant_vendida   decimal(18,0) NOT NULL,
-  opap_precio_venta   decimal(18,2) NOT NULL
-
-  Constraint pk_opap	  PRIMARY KEY(opap_id        ),
-  Constraint fk_opap_inst FOREIGN KEY(opap_instante  ) REFERENCES LOS_GEDDES.Bi_Instantes(inst_id),
-  Constraint fk_opap_sucu FOREIGN KEY(opap_sucursal	 ) REFERENCES LOS_GEDDES.Sucursales(sucu_id),
-  Constraint fk_opap_apte FOREIGN KEY(opap_autoparte ) REFERENCES LOS_GEDDES.Autopartes(apte_codigo),
-  Constraint fk_opap_cate FOREIGN KEY(opap_rubro     ) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo),   
-  Constraint fk_opap_fabr FOREIGN KEY(opap_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
  );
 go
 
@@ -387,19 +372,22 @@ go
 
 CREATE VIEW LOS_GEDDES.Precio_promedio_autopartes as
 (
-	Select opap_autoparte as Autoparte, avg(opap_precio_venta) as Precio_promedio_venta, avg(opap_costo_unitario) as Precio_promedio_compra
-		from LOS_GEDDES.Bi_Operaciones_autopartes
-		group by opap_autoparte
+	Select ca.coau_autoparte as Autoparte, 
+	avg(veau_precio_venta) as Precio_promedio_venta, avg(coau_costo_unitario) as Precio_promedio_compra
+		from LOS_GEDDES.Bi_Compras_autopartes ca
+		left join LOS_GEDDES.Bi_Ventas_autopartes va on va.veau_autoparte =  ca.coau_autoparte
+		group by coau_autoparte
+
 );
 go
 
 CREATE VIEW LOS_GEDDES.ganancias_mensuales_autopartes AS
 (
 	Select inst_anio as anio, inst_mes as mes, sucu_ciudad as sucursal_ciudad, sucu_direccion as sucursal_direccion,
-		sum((opap_precio_venta - opap_costo_unitario )* opap_cant_vendida) as ganancia
-		FROM LOS_GEDDES.Bi_Operaciones_autopartes 
-		JOIN LOS_GEDDES.Bi_Instantes ON inst_id = opap_instante
-		JOIN LOS_GEDDES.Sucursales ON sucu_id = opap_sucursal
+		sum((veau_precio_venta - veau_costo_unitario )* veau_cant_vendida) as ganancia
+		FROM LOS_GEDDES.Bi_Ventas_autopartes 
+		JOIN LOS_GEDDES.Bi_Instantes ON inst_id = veau_instante
+		JOIN LOS_GEDDES.Sucursales ON sucu_id = veau_sucursal
 		GROUP BY inst_anio,inst_mes,sucu_ciudad,sucu_direccion
 );
 go
@@ -501,13 +489,12 @@ GO
 CREATE PROCEDURE LOS_GEDDES.MigracionCompraAutopartes AS
 BEGIN
 
-	INSERT INTO LOS_GEDDES.Bi_Operaciones_autopartes
-	(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
-	, opap_cant_vendida)
+	INSERT INTO LOS_GEDDES.Bi_Compras_autopartes
+	(coau_instante, coau_sucursal, coau_autoparte, coau_rubro, coau_fabricante, coau_cant_comprada, coau_costo_unitario)
 	(
 		Select inst_id, o.sucursal, ipco_id_autoparte, apte_categoria as rubro, apte_fabricante as fabricante
 		, isnull(sum(ipco_cantidad), 0) as cantidad_comprada
-		, max(ipco_precio), 0 as max_precio_venta, 0 as cant_vendida
+		, max(ipco_precio)
 		FROM #operaciones o
 		join LOS_GEDDES.Items_por_compra on ipco_id_compra=o.compra					
 		join LOS_GEDDES.Bi_Instantes
@@ -523,11 +510,10 @@ GO
 CREATE PROCEDURE LOS_GEDDES.MigracionVentaAutopartes AS
 BEGIN
 
-	INSERT INTO LOS_GEDDES.Bi_Operaciones_autopartes
-	(opap_instante, opap_sucursal, opap_autoparte, opap_rubro, opap_fabricante, opap_cant_comprada, opap_costo_unitario, opap_precio_venta
-	, opap_cant_vendida)
+	INSERT INTO LOS_GEDDES.Bi_Ventas_autopartes
+	(veau_instante, veau_sucursal, veau_autoparte, veau_rubro, veau_fabricante, veau_costo_unitario, veau_precio_venta
+	, veau_cant_vendida)
 	(Select inst_id, o.sucursal, ipfa_id_autoparte, apte_categoria as rubro, apte_fabricante as fabricante
-		, 0 as cantidad_comprada
 		, SUM(ipfa_cantidad), max(ipfa_precio_facturado) as max_precio_venta
 		, isnull(sum(ipfa_cantidad), 0) as cant_vendida
 		from #operaciones o
@@ -595,7 +581,7 @@ BEGIN
 	print @SALTO_DE_LINEA +'>> Migracion Ventas de autopartes:'
 	EXEC LOS_GEDDES.MigracionVentaAutopartes
 
-	print @SALTO_DE_LINEA +'>> Migracion Stock de autopartes: -> TO-DO'
+	print @SALTO_DE_LINEA +'>> Migracion Stock de autopartes:'
 	EXEC LOS_GEDDES.Stock_autopartes	
 
 END
