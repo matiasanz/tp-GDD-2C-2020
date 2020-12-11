@@ -25,9 +25,6 @@ IF OBJECT_ID('LOS_GEDDES.Bi_Compras_autopartes', 'U') IS NOT NULL
 IF OBJECT_ID('LOS_GEDDES.Bi_Ventas_autopartes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Ventas_autopartes
 
-IF OBJECT_ID('LOS_GEDDES.Bi_operaciones_autopartes', 'U') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Bi_operaciones_autopartes
-
 IF OBJECT_ID('LOS_GEDDES.Bi_Instantes', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Instantes
 
