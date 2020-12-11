@@ -4,9 +4,6 @@ GO
 IF OBJECT_ID('LOS_GEDDES.Bi_stock_autoparte') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_stock_autoparte
 
-IF OBJECT_ID('LOS_GEDDES.Bi_Estadisticas_clientes', 'U') IS NOT NULL
-	DROP TABLE LOS_GEDDES.Bi_Estadisticas_clientes
-
 IF OBJECT_ID('LOS_GEDDES.Bi_Compras_automoviles', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_Compras_automoviles
 
@@ -27,6 +24,9 @@ IF OBJECT_ID('LOS_GEDDES.Bi_rangos_edades', 'U') IS NOT NULL
 
 IF OBJECT_ID('LOS_GEDDES.Bi_rangos_potencias', 'U') IS NOT NULL
 	DROP TABLE LOS_GEDDES.Bi_rangos_potencias
+
+IF OBJECT_ID('LOS_GEDDES.Bi_clientes', 'U') IS NOT NULL
+	DROP TABLE LOS_GEDDES.Bi_clientes
 
 IF OBJECT_ID('LOS_GEDDES.Compraventa_mensual_automoviles', 'V') IS NOT NULL
 	DROP VIEW LOS_GEDDES.Compraventa_mensual_automoviles
@@ -82,21 +82,8 @@ CREATE TABLE LOS_GEDDES.Bi_rangos_edades(
 
   Constraint pk_rged PRIMARY KEY(rged_id)
 )
+
 --Creacion de tablas de hechos
-CREATE TABLE LOS_GEDDES.Bi_Estadisticas_clientes(
-  ecli_id		bigint IDENTITY(1,1),
-  ecli_instante bigint NOT NULL,
-  ecli_sucursal bigint NOT NULL,
-  ecli_sexo		char(1),
-  ecli_rg_edad	bigint NOT NULL,
-  ecli_cantidad bigint NOT NULL,
-
-  Constraint pk_estad_clientes PRIMARY KEY(ecli_id     ),
-  Constraint fk_ecli_inst	   FOREIGN KEY(ecli_instante) REFERENCES  LOS_GEDDES.Bi_Instantes(inst_id),
-  Constraint fk_ecli_sucu	   FOREIGN KEY(ecli_sucursal) REFERENCES  LOS_GEDDES.Sucursales(sucu_id),
-  Constraint fk_ecli_edad	   FOREIGN KEY(ecli_rg_edad ) REFERENCES  LOS_GEDDES.Bi_rangos_edades(rged_id)
-);
-
 CREATE TABLE LOS_GEDDES.Bi_Compras_automoviles(
   cpau_id			   bigint IDENTITY(1,1),
   cpau_auto			   bigint NOT NULL,
@@ -105,7 +92,8 @@ CREATE TABLE LOS_GEDDES.Bi_Compras_automoviles(
   cpau_rg_potencia	   bigint NOT NULL,
   cpau_instante		   bigint NOT NULL,
   cpau_sucursal		   bigint NOT NULL,
-  cpau_precio		   decimal(18,2) NOT NULL
+  cpau_precio		   decimal(18,2) NOT NULL,
+  cpau_cliente		   bigint NOT NULL
   
   Constraint pk_opau		   PRIMARY KEY(cpau_id),
   Constraint fk_opau_auto	   FOREIGN KEY(cpau_auto		   ) REFERENCES LOS_GEDDES.Automoviles(auto_id),
@@ -125,6 +113,7 @@ CREATE TABLE LOS_GEDDES.Bi_Ventas_automoviles(
   vtau_instante		   bigint,
   vtau_sucursal		   bigint ,
   vtau_precio		   decimal(18,2), 
+  vtau_cliente		   bigint
   
   Constraint pk_vtau		   PRIMARY KEY(vtau_id),
   Constraint fk_vtau_auto	   FOREIGN KEY(vtau_auto		   ) REFERENCES LOS_GEDDES.Automoviles(auto_id),
@@ -173,6 +162,13 @@ CREATE TABLE LOS_GEDDES.Bi_Ventas_autopartes (
   Constraint fk_veau_cate FOREIGN KEY(veau_rubro     ) REFERENCES LOS_GEDDES.Categorias_autopartes(cate_codigo),   
   Constraint fk_veau_fabr FOREIGN KEY(veau_fabricante) REFERENCES LOS_GEDDES.Fabricantes(fabr_id)
  );
+go
+
+CREATE TABLE LOS_GEDDES.Bi_Clientes(
+	bicl_id bigint NOT NULL, 
+	bicl_sexo char,
+	bicl_rg_edad int
+);
 go
 
 CREATE INDEX indx_items_factura_factura_numero
@@ -422,23 +418,11 @@ GO
 -- Estadisticas de Clientes
 CREATE PROCEDURE LOS_GEDDES.MigracionClientes AS
 BEGIN
+	declare @anio bigint = year(getdate())
 
-	INSERT INTO LOS_GEDDES.Bi_Estadisticas_clientes
-	(ecli_instante, ecli_sucursal, ecli_sexo, ecli_rg_edad, ecli_cantidad)
-	(
-	Select distinct inst_id, sucursal, clie_sexo, rg_edad, count(*)
-		from (
-			Select *, LOS_GEDDES.rg_edad_en_el_anio(clie_fecha_nac, anio) as rg_edad 
-				from LOS_GEDDES.Clientes 
-				join #Operaciones
-					on clie_id=cliente
-		) as Clientes
-		
-		join LOS_GEDDES.Bi_Instantes
-			on inst_mes = mes
-			and inst_anio=anio
-		group by sucursal, inst_id, rg_edad, clie_sexo
-);
+	INSERT INTO LOS_GEDDES.Bi_Clientes
+	select clie_id, clie_sexo, LOS_GEDDES.rg_edad_en_el_anio(clie_fecha_nac, @anio)
+		from LOS_GEDDES.Clientes
 END
 GO
 
@@ -446,11 +430,12 @@ GO
 CREATE PROCEDURE LOS_GEDDES.MigracionComprasAutomoviles AS
 BEGIN
 	 INSERT INTO LOS_GEDDES.Bi_Compras_automoviles
-	 (cpau_auto, cpau_modelo, cpau_fabricante, cpau_rg_potencia, cpau_instante, cpau_sucursal, cpau_precio)
+	 (cpau_auto, cpau_modelo, cpau_fabricante, cpau_rg_potencia, cpau_instante, cpau_sucursal, cpau_precio, cpau_cliente)
 	 (
-		Select automovil, modelo, mode_fabricante, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total from #operaciones
+		Select automovil, modelo, mode_fabricante, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total, cliente
+			from #operaciones
 			join LOS_GEDDES.Bi_instantes
-					on inst_anio=anio
+				on inst_anio=anio
 					and inst_mes=mes
 			join LOS_GEDDES.Modelos_automoviles
 				on mode_codigo=modelo
@@ -464,9 +449,9 @@ CREATE PROCEDURE LOS_GEDDES.MigracionVentasAutomoviles AS
 BEGIN
 
 	INSERT INTO LOS_GEDDES.Bi_Ventas_automoviles
-	 (vtau_auto, vtau_modelo, vtau_fabricante, vtau_rg_potencia, vtau_instante, vtau_sucursal, vtau_precio)
+	 (vtau_auto, vtau_modelo, vtau_fabricante, vtau_rg_potencia, vtau_instante, vtau_sucursal, vtau_precio, vtau_cliente)
 	 (
-		select automovil, modelo, mode_fabricante, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total 
+		select automovil, modelo, mode_fabricante, LOS_GEDDES.rango_potencia(mode_potencia), inst_id, sucursal, precio_total, cliente 
 			from #operaciones
 			join LOS_GEDDES.Bi_instantes
 					on inst_anio=anio
