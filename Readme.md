@@ -1,8 +1,6 @@
-# TP de GDD - LOS_GEDDES
+# TP de Gestión de Datos
 
-## Readme **NO ENTREGABLE**
+## Materia Obligatoria 4to Nivel - UTN FRBA - 2020 2C
 
 ### Diagrama de Entidad-Relación: 
 ![DER](/DER.png)
-
-_Actualizado 18 de Octubre_
