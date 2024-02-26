@@ -11,9 +11,9 @@
 ### 2do P: SQL
 > Se necesita saber que productos no han sido vendidos durante el año 2012 pero que sí tuvieron ventas en año anteriores.
 De esos productos mostrar:
- [x] Código de producto
- [x] Nombre de Producto
- [x] Un string que diga si es compuesto o no.
+- Código de producto
+- Nombre de Producto
+- Un string que diga si es compuesto o no.
 > El resultado deberá ser ordenado por cantidad vendida en años anteriores.
 > NOTA: No se permite el uso de sub-selects en el FROM ni funciones definidas por el usuario para este punto.
 
