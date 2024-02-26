@@ -22,4 +22,4 @@ De esos productos mostrar:
 
 ## Modelo de Datos
 ### Diagrama de Entidad-Relación:
-[!DER](/Diagramas/DER_MODELO_CATEDRA)
+[!DER](../Diagramas/DER_MODELO_CATEDRA)

@@ -2,8 +2,8 @@
 
 ## Modelo de Datos
 ### Diagrama de Entidad-Relación: 
-![DER](/Diagramas/DER.png)
+![DER](../Diagramas/DER.png)
 
 ## Modelo de Business Inteligence
 ### Diagrama de Entidad-Relación:
-![DER_BI](/Diagramas/DER_BI.png)
+![DER_BI](../Diagramas/DER_BI.png)
